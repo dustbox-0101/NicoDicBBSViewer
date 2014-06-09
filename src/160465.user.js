@@ -1,6 +1,7 @@
 // ==UserScript==
 // @name NicoDicBBSViewer
 // @description ニコニコ大百科のBBSの拡張
+// @namespace http://threeaster.net
 // @include http://dic.nicovideo.jp/a/*
 // @include http://dic.nicovideo.jp/b/*
 // @include http://dic.nicovideo.jp/l/*
@@ -10,6 +11,7 @@
 // @require http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js
 // @grant GM_getValue
 // @grant GM_setValue
+// @version 0.0.1.20140609045517
 // ==/UserScript==
 $.noConflict();
 (function($){
@@ -72,7 +74,7 @@ $.noConflict();
 	function Res(reshead, resbody){
 		this.reshead = reshead;
 			var a = this.reshead.find("a").eq(0);
-			a.attr("id", "r" + a.attr("name")).attr("href", "#" + a.attr("id"));
+			//a.attr("id", "r" + a.attr("name")).attr("href", "#" + a.attr("id"));
 		if(GM_getValue("loadAll") && document.URL.indexOf("http://dic.nicovideo.jp/b/") !== -1){
 			a.html(a.attr("name"));
 			var t = reshead.html();
@@ -155,7 +157,7 @@ $.noConflict();
 	
 	Res.prototype.makeNumberDiv = function(){
 		this.linkedResponds = [];
-		var myNumber = this.reshead.attr("data-number");
+		var myNumber = this.reshead.attr("data-number") - 0;
 		for(var i = 0; i < responds.res.length; i++){
 			var numberAnchorsWrapset = responds.res[i].resbody.find("a.dic");
 			numberAnchors = [];
@@ -171,7 +173,7 @@ $.noConflict();
 				if(num.indexOf("-") === -1 && myNumber == num){
 					this.linkedResponds.push(responds.res[i]);
 					break;
-				}else{
+				}else if(num.indexOf("-") !== -1){
 					num = num.split("-");
 					if(num[0] <= myNumber && myNumber <= num[1]){
 						this.linkedResponds.push(responds.res[i]);
@@ -217,7 +219,8 @@ $.noConflict();
 		this.resbody.find("a.dic").filter(function(){return $(this).html().indexOf("&gt;&gt;") !== -1}).each(function(){
 			var self = $(this);
 			var num = self.html().split("&gt;").join("").split("-");
-			self.attr("href", "#r" + num[0]);
+			//self.attr("href", "#r" + num[0]);
+			self.attr("href", "#" + num[0]);
 			self.removeAttr("target");
 			self.wrap("<span class='numTooltip'></span>").parent().unbind("mouseenter").unbind("mouseleave").hover(function(){
 				var self = $(this);
@@ -488,21 +491,29 @@ $.noConflict();
 	}
 
 	var setMenu = function(){
-		$("body").prepend('<ul id="sidemenu" style="top:100px; float:left; position:fixed; list-style-type:none; padding:0px"><li id="bbsLi" class="selected">掲示板</li><li id="ngLi">設定</li></ul>');
-		$("#bbs").after('<div id="ng"><div style="float:left; width:24%"><p>改行で区切ってNGIDを入力or削除してください。</p><textarea id="ngidTextarea" cols="20" rows="10" placeholder="NGIDを改行で区切って入力してください。">' + (nglist.ngidText ? nglist.ngidText : "")  + '</textarea></div><div style="float:left; width:24%"><p>改行で区切ってNGNameを入力or削除してください。</p><textarea id="ngnameTextarea" cols="20" rows="10" placeholder="NGNameを改行で区切って入力してください。">' + (nglist.ngnameText ? nglist.ngnameText : "" ) + '</textarea></div><div style="float:left; width:24%"><p>改行で区切ってNGワードを入力or削除してください。</p><textarea id="ngwordTextarea" cols="20" rows="10" placeholder="NGワードを改行で区切って入力してください。">' + (nglist.ngwordText ? nglist.ngwordText : "")  + '</textarea></div><div style="float:left; width:24%"><p>改行で区切って(BBSのURL:レス番号)の書式でNGレスを入力or削除してください。</p><textarea id="ngresTextarea" cols="20" rows="10" placeholder="NGレスを(BBSのURL:レス番号)の書式で改行で区切って入力してください。">' + (nglist.ngresText ? nglist.ngresText : "") + '</textarea></div><div style="clear:left;"><form><ul style="list-style-type: none;"><li>' + getCheckbox("autoLoad") + '下までスクロールした時に次のページを読み込む</li><li>NG機能<ul style="list-style-type: none; margin-left:5px;"><li>' + getCheckbox("useNG") + 'NG機能を使用する</li><li>' + getCheckbox("seethroughNG") + 'NGが適用されたレスを表示しない</li></ul></li><li>' + getCheckbox("tooltipOnDicPage") +'記事ページでもID、番号の色分けやツールチップを表示する</li><li>ツールチップ(更新時有効)<ul style="list-style-type: none; margin-left:5px;"><li>' + getCheckbox("showIDTooltip") +'ID(<span style="text-decoration:underline;">ID</span>)ツールチップを表示する</li><li>' + getCheckbox("showResAnchorTooltip") +'レスアンカー(<span style="color: rgb(0, 102, 204);">>>1</span>)ツールチップを表示する</li><li>' + getCheckbox("showResNumberTooltip") + 'レス番(<span style="text-decoration:underline;">1</span>)ツールチップを表示する</li><li>' + getCheckbox("showResHandleTooltip") + 'レス番ハンドル(<span style="color: rgb(0, 136, 0); font-weight: bold;">1</span>)ツールチップを表示する</li></ul></li><li>色分け(更新時有効)<ul style="list-style-type: none; margin-left:5px;"><li>' + getCheckbox("classificationID") + 'IDを色分けし、そのIDのレスの回数を表示する</li><li>' + getCheckbox("classificationResNumber") +'参照されているレス番を色分けする</li></ul></li></ul></form><button id="decideNG">保存</button>　<button id="cancelNG">キャンセル</button></div></div> <ul id="contextMenu"><li id="ngidMenu">NGIDに追加</li><li id="ngnameMenu">NGNameに追加</li><li id="ngresMenu">このレスを削除</li></ul>');
+		if(GM_getValue("switcherInTopMenu")){
+			$("#topbarLogoutMenu").after('<li>NicoDicBBSViewer</li><li id="bbsLi" class="selected"><a href="#">掲示板を表示する</a></li><li id="ngLi"><a href="#">設定画面を表示する</a></li>');
+		}else{
+			$("body").prepend('<ul id="sidemenu" style="top:100px; float:left; position:fixed; list-style-type:none; padding:0px"><li id="bbsLi" class="selected">掲示板</li><li id="ngLi">設定</li></ul>');
+
+		}
+		$("#bbs").after('<div id="ng"><div style="float:left; width:24%"><p>改行で区切ってNGIDを入力or削除してください。</p><textarea id="ngidTextarea" cols="20" rows="10" placeholder="NGIDを改行で区切って入力してください。">' + (nglist.ngidText ? nglist.ngidText : "")  + '</textarea></div><div style="float:left; width:24%"><p>改行で区切ってNGNameを入力or削除してください。</p><textarea id="ngnameTextarea" cols="20" rows="10" placeholder="NGNameを改行で区切って入力してください。">' + (nglist.ngnameText ? nglist.ngnameText : "" ) + '</textarea></div><div style="float:left; width:24%"><p>改行で区切ってNGワードを入力or削除してください。</p><textarea id="ngwordTextarea" cols="20" rows="10" placeholder="NGワードを改行で区切って入力してください。">' + (nglist.ngwordText ? nglist.ngwordText : "")  + '</textarea></div><div style="float:left; width:24%"><p>改行で区切って(BBSのURL:レス番号)の書式でNGレスを入力or削除してください。</p><textarea id="ngresTextarea" cols="20" rows="10" placeholder="NGレスを(BBSのURL:レス番号)の書式で改行で区切って入力してください。">' + (nglist.ngresText ? nglist.ngresText : "") + '</textarea></div><div style="clear:left;"><form><ul style="list-style-type: none;"><li>' + getCheckbox("autoLoad") + '下までスクロールした時に次のページを読み込む</li><li>NG機能<ul style="list-style-type: none; margin-left:5px;"><li>' + getCheckbox("useNG") + 'NG機能を使用する</li><li>' + getCheckbox("seethroughNG") + 'NGが適用されたレスを表示しない</li></ul></li><li>' + getCheckbox("tooltipOnDicPage") +'記事ページでもID、番号の色分けやツールチップを表示する</li><li>ツールチップ(更新時有効)<ul style="list-style-type: none; margin-left:5px;"><li>' + getCheckbox("showIDTooltip") +'ID(<span style="text-decoration:underline;">ID</span>)ツールチップを表示する</li><li>' + getCheckbox("showResAnchorTooltip") +'レスアンカー(<span style="color: rgb(0, 102, 204);">>>1</span>)ツールチップを表示する</li><li>' + getCheckbox("showResNumberTooltip") + 'レス番(<span style="text-decoration:underline;">1</span>)ツールチップを表示する</li><li>' + getCheckbox("showResHandleTooltip") + 'レス番ハンドル(<span style="color: rgb(0, 136, 0); font-weight: bold;">1</span>)ツールチップを表示する</li></ul></li><li>色分け(更新時有効)<ul style="list-style-type: none; margin-left:5px;"><li>' + getCheckbox("classificationID") + 'IDを色分けし、そのIDのレスの回数を表示する</li><li>' + getCheckbox("classificationResNumber") +'参照されているレス番を色分けする</li></ul></li><ul><li>UI<ul><li>' + getCheckbox("switcherInTopMenu") + '掲示板/設定画面切り替えボタンを上のメニュー内に入れる(更新時有効)</li></ul></li></ul></ul></form><button id="decideNG">保存</button>　<button id="cancelNG">キャンセル</button>　<button id="backToBbsButton">掲示板に戻る</button></div></div> <ul id="contextMenu"><li id="ngidMenu">NGIDに追加</li><li id="ngnameMenu">NGNameに追加</li><li id="ngresMenu">このレスを削除</li></ul>');
 		var contents = $("#bbs, #ng");
 		$(window).scroll(ajustSideMenu);
 		ajustSideMenu();
-		$("#bbsLi").click(function(){
+		var backBBS = function(){
 			if($(".selected").attr("id") === "bbsLi"){
 				bbsScroll = $("html").scrollTop();
 			}
 			$(".selected").removeClass("selected");
-			$(this).addClass("selected");
+			$("#bbsLi").addClass("selected");
 			contents.not("#bbs").css("display", "none");
 			$("#bbs").css("display", "block");
 			$("html").scrollTop(bbsScroll);
-		});
+			return false;
+		};
+		$("#bbsLi").click(backBBS);
+		$("#backToBbsButton").click(backBBS);
 
 		$("#ngLi").click(function(){
 			if($(".selected").attr("id") === "bbsLi"){
@@ -513,6 +524,7 @@ $.noConflict();
 			contents.not("#ngid").css("display", "none");
 			$("#ng").css("display", "block");
 			$("html").scrollTop($("#ng").offset().top - $("#topline").height());
+			return false;
 		});
 		
 		var setcbConfig = function(id){
@@ -543,6 +555,7 @@ $.noConflict();
 			setcbConfig("showResHandleTooltip");
 			setcbConfig("classificationID");
 			setcbConfig("classificationResNumber");
+			setcbConfig("switcherInTopMenu");
 			initNG();
 			applyNG();
 		});
@@ -562,7 +575,8 @@ $.noConflict();
 			checkcbConfig("showResNumberTooltip");
 			checkcbConfig("showResHandleTooltip");
 			checkcbConfig("classificationID");
-			checkcbConfig("classificationResNumber")
+			checkcbConfig("classificationResNumber");
+			checkcbConfig("switcherInTopMenu");
 		});
 	};
 
@@ -795,7 +809,7 @@ $.noConflict();
 		GM_setValue("useNG", true);
 	}
 	*/
-	$("link").eq(1).after($("<style id='nicoDicBBSViewerCSS' type='text/css'>.ID{text-decoration:underline; color:black; display:inline;} .IDMulti{text-decoration:underline; color:blue; display:inline;} .IDMany{text-decoration:underline; color:red; display:inline;} .Number{text-decoration: underline; display:inline;} .NumberMulti{text-decoration: underline; display:inline; color:blue;} .NumberMany{text-decoration: underline; display:inline; color:red;} .dic{display:inline;} .ID:hover, .IDMulti:hover, .IDMany:hover, .dic:hover{text-decoration:none;} .ID>div, .IDMulti>div, .IDMany>div, .dic>div, .Number>div, .NumberMulti>div, .NumberMany>div, .NumberHandle>div{display:none;} .ID:hover>div, .IDMulti:hover>div, .IDMany:hover>div, .numTooltip:hover>div, .Number:hover>div, .NumberMulti:hover>div, .NumberMany:hover>div, .NumberHandle:hover>div{color:black; display:inline; position:absolute; background:#f5f5b5; border:solid black 1px; padding;5px; font-size:8pt; overflow:auto; box-shadow:1px 1px; z-index:10000;} div.left-box{border: groove 1px gray; border-radius: 5px; background-image:none;} #ng{display:none;} ul#sidemenu li{border:solid 1px; width:100px;} .selected{color:red;} #contextMenu{background : #d4d0c8;color : #000000;display : none;position : absolute;list-style : none;	padding-left : 0px;box-shadow : 1px 1px;}#contextMenu li{padding : 3px;}#contextMenu li:hover{background : #0a246a;color : #ffffff;}</style>"));
+	$("link").eq(1).after($("<style id='nicoDicBBSViewerCSS' type='text/css'>.ID{text-decoration:underline; color:black; display:inline;} .IDMulti{text-decoration:underline; color:blue; display:inline;} .IDMany{text-decoration:underline; color:red; display:inline;} .Number{text-decoration: underline; display:inline;} .NumberMulti{text-decoration: underline; display:inline; color:blue;} .NumberMany{text-decoration: underline; display:inline; color:red;} .dic{display:inline;} .ID:hover, .IDMulti:hover, .IDMany:hover, .dic:hover{text-decoration:none;} .ID>div, .IDMulti>div, .IDMany>div, .dic>div, .Number>div, .NumberMulti>div, .NumberMany>div, .NumberHandle>div{display:none;} .ID:hover>div, .IDMulti:hover>div, .IDMany:hover>div, .numTooltip:hover>div, .Number:hover>div, .NumberMulti:hover>div, .NumberMany:hover>div, .NumberHandle:hover>div{color:black; display:inline; position:absolute; background:#f5f5b5; border:solid black 1px; padding;5px; font-size:8pt; overflow:auto; box-shadow:1px 1px; z-index:10000;} div.left-box{border: groove 1px gray; border-radius: 5px; background-image:none;} #ng{display:none;} #topbarRightMenu #bbsLi.selected,#topbarRightMenu #ngLi.selected{display:none;} ul#sidemenu li{border:solid 1px; width:100px;} ul#sidemenu li.selected{color:red;} #contextMenu{background : #d4d0c8;color : #000000;display : none;position : absolute;list-style : none;	padding-left : 0px;box-shadow : 1px 1px;}#contextMenu li{padding : 3px;}#contextMenu li:hover{background : #0a246a;color : #ffffff;}</style>"));
 	var parent = $("#bbs");
 	parent.find("dl").attr("id", "bbsmain");
 	var bbsScroll = 0;
@@ -827,7 +841,7 @@ $.noConflict();
 		}else{
 			var manager = new ManagerToReadBbs(getBBSURLs(pager.eq(0)));
 			$(document).bind("AutoPagerize_DOMNodeInserted", function(){
-				$("[class^='autopagerize'] , dl:not(#bbsmain)").remove();
+				$("[class^='autopagerize'] , dl:not(#bbsmain) , #autopagerize_message_bar").remove();
 			});
 			var reserved = false;
 			setInterval(function(){
