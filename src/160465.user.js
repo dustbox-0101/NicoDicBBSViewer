@@ -14,7 +14,80 @@
 // @version 0.0.1.20140609045517
 // ==/UserScript==
 $.noConflict();
+var net_threeaster_NicoDicBBSViewer = {};
 (function($){
+	//-----UrlAnalyzer-----
+	function UrlAnalyzer(){};
+	UrlAnalyzer.prototype.getNowUrl = function(){
+		return document.URL;
+	};
+	UrlAnalyzer.prototype.inArticlePage = function(){
+		return this.getNowUrl().indexOf("http://dic.nicovideo.jp/b/") === -1;
+	};
+	UrlAnalyzer.prototype.getBBSURLs = function(pager){
+		var urls = pager.find("a").not(".navi").map(function(){return this.href}).get();
+		var bbsURLs = [];
+		if(urls.length){
+			var lastURLParts = urls[urls.length - 1].split("/");
+			var lastNumber = lastURLParts[lastURLParts.length - 1].replace("-", "");
+			if(!this.inArticlePage()){
+				var nowURLParts = this.getNowUrl().split("#")[0].split("/");
+				var nowNumber = nowURLParts[nowURLParts.length - 1].replace("-", "");
+				lastNumber = (lastNumber - 0 >= nowNumber - 0) ? lastNumber : nowNumber;
+			}
+			lastURLParts.pop();
+			var basicURL = lastURLParts.join("/") + "/";
+			for(var i = lastNumber; i > 0; i -= 30){
+				bbsURLs.unshift(basicURL + i + "-");
+			}
+		}else{
+			var url = this.getNowUrl();
+			if(url.indexOf("#") !== -1){
+				url = url.substring(0, url.indexOf("#"));
+				if(url.indexOf("-") === -1){
+					url = url + "-";
+				}
+			}
+			bbsURLs.push(url);
+		}
+		return bbsURLs;
+	};
+
+	//-----ResList-----
+	function ResList(){}
+	ResList.prototype.createRes =  function(dl){
+		dl.find("dt").each(function(){
+			var self = $(this);
+			self.attr("data-number", self.find("a").eq(0).attr("name"));
+			self.attr("data-name", self.find("span").text());
+			var id = self.text().split(":");
+			id = id[id.length - 1].split("[");
+			id = id[0];
+			self.attr("data-id", $.trim(id));
+		});
+		var resheads = dl.find("dt");
+		var resbodies = dl.find("dd");
+		this.resList = new Array(resheads.size());
+		for(var i = 0; i < resheads.size(); i++){
+			this.resList[i] = new Res(resheads.eq(i), resbodies.eq(i));
+		}
+	};
+	ResList.prototype.createResListById = function(){
+		this.resListById = {};
+		for(var i = 0; i < this.resList.length; i++){
+			if(!this.resListById[$(this.resList[i].reshead).attr("data-id")]){
+				this.resListById[$(this.resList[i].reshead).attr("data-id")] = [];
+			}
+			this.resListById[$(this.resList[i].reshead).attr("data-id")].push(this.resList[i]);
+		}
+	};
+
+	//-----BbsInitializer-----
+	/*
+	function BbsInitializer(){}
+	BbsInitializer.prototype.
+	*/
+
 	var removeUselessLines = function(s){
 		if(!s){
 			return;
@@ -31,34 +104,7 @@ $.noConflict();
 		}
 		return lines.join("\n");
 	};
-	var getBBSURLs = function(pager){
-		var urls = pager.find("a").not(".navi").map(function(){return this.href}).get();
-		var bbsURLs = [];
-		if(urls.length){
-			var lastURLParts = urls[urls.length - 1].split("/");
-			var lastNumber = lastURLParts[lastURLParts.length - 1].replace("-", "");
-			if(document.URL.indexOf("http://dic.nicovideo.jp/b/") !== -1){
-				var nowURLParts = document.URL.split("#")[0].split("/");
-				var nowNumber = nowURLParts[nowURLParts.length - 1].replace("-", "");
-				lastNumber = (lastNumber - 0 >= nowNumber - 0) ? lastNumber : nowNumber;
-			}
-			lastURLParts.pop();
-			var basicURL = lastURLParts.join("/") + "/";
-			for(var i = lastNumber; i > 0; i -= 30){
-				bbsURLs.unshift(basicURL + i + "-");
-			}
-		}else{
-			var url = document.URL;
-			if(url.indexOf("#") !== -1){
-				url = url.substring(0, url.indexOf("#"));
-				if(url.indexOf("-") === -1){
-					url = url + "-";
-				}
-			}
-			bbsURLs.push(url);
-		}
-		return bbsURLs;
-	};
+
 
 	var setContextMenu = function(a){
 		var dl = a ? a : $("#bbsmain");
@@ -73,6 +119,7 @@ $.noConflict();
 
 	function Res(reshead, resbody){
 		this.reshead = reshead;
+		/*
 			var a = this.reshead.find("a").eq(0);
 			//a.attr("id", "r" + a.attr("name")).attr("href", "#" + a.attr("id"));
 		if(GM_getValue("loadAll") && document.URL.indexOf("http://dic.nicovideo.jp/b/") !== -1){
@@ -82,6 +129,7 @@ $.noConflict();
 			var after = t.substring(t.indexOf("</a>")).replace(a.attr("name"), "");
 			reshead.html(before + after);
 		}
+		*/
 		this.resbody = resbody;
 	};
 
@@ -99,7 +147,7 @@ $.noConflict();
 		});
 	};
 
-	Res.prototype.makeIDDivReflectingSameID = function(){
+	Res.prototype.makeIDDivReflectingSameID = function(resListById){
 		var addOrdinalAndTotal = function(res, sameIDRes){
 			if(GM_getValue("classificationID")){
 				return "[" + (sameIDRes.indexOf(res) + 1) + "/" + sameIDRes.length + "]"
@@ -107,7 +155,7 @@ $.noConflict();
 				return "";
 			}
 		}
-		var sameIDRes = responds.resByID[this.reshead.attr("data-id")];
+		var sameIDRes = resListById[this.reshead.attr("data-id")];
 		if(GM_getValue("classificationID")){
 			var addIDMulti = "IDMulti";
 			var addIDMany = "IDMany";
@@ -155,12 +203,12 @@ $.noConflict();
 		}
 	}
 	
-	Res.prototype.makeNumberDiv = function(){
+	Res.prototype.makeNumberDiv = function(resList){
 		this.linkedResponds = [];
 		var myNumber = this.reshead.attr("data-number") - 0;
-		for(var i = 0; i < responds.res.length; i++){
-			var numberAnchorsWrapset = responds.res[i].resbody.find("a.dic");
-			numberAnchors = [];
+		for(var i = 0; i < resList.length; i++){
+			var numberAnchorsWrapset = resList[i].resbody.find("a.dic");
+			var numberAnchors = [];
 			if(numberAnchorsWrapset.size() !== 0){
 				numberAnchorsWrapset.each(function(){
 					numberAnchors.push($(this).html().split("&gt;").join(""));
@@ -171,12 +219,12 @@ $.noConflict();
 			for(var j = 0; j < numberAnchors.length; j++){
 				var num = numberAnchors[j];
 				if(num.indexOf("-") === -1 && myNumber == num){
-					this.linkedResponds.push(responds.res[i]);
+					this.linkedResponds.push(resList[i]);
 					break;
 				}else if(num.indexOf("-") !== -1){
 					num = num.split("-");
 					if(num[0] <= myNumber && myNumber <= num[1]){
-						this.linkedResponds.push(responds.res[i]);
+						this.linkedResponds.push(resList[i]);
 						break;
 					}
 				}
@@ -191,11 +239,12 @@ $.noConflict();
 		}else{
 			this.reshead.html(this.reshead.html().replace(/a>([0-9]+)/, "a><div class='NumberMany'>$1</div>"));
 		}
+		console.log(this.reshead.html());
 	}
 
 
 	Res.prototype.makeIDTooltip = function(){
-		var sameIDRes = responds.resByID[this.reshead.attr("data-id")];
+		var sameIDRes = responds.resListById[this.reshead.attr("data-id")];
 		var divID = this.reshead.find("div[class^='ID']");
 		divID.unbind("mouseenter").unbind("mouseleave").hover(function(){
 			var tooltip = $("<div></div>").click(function(e){e.stopPropagation();});
@@ -331,7 +380,7 @@ $.noConflict();
 					parent.find("dl").eq(0).empty();
 					delayiframe(dl);
 					createRes(dl);
-					createResById();
+					createResListById();
 					makeTooltips();
 					showres(responds.res);
 					setContextMenu();
@@ -355,34 +404,6 @@ $.noConflict();
 			e.data.each(recover);
 		});
 	}
-
-	var createRes = function(dl){
-		dl.find("dt").each(function(){
-			var self = $(this);
-			self.attr("data-number", self.find("a").eq(0).attr("name"));
-			self.attr("data-name", self.find("span").text());
-			var id = self.text().split(":");
-			id = id[id.length - 1].split("[");
-			id = id[0];
-			self.attr("data-id", $.trim(id));
-		});
-		var resheads = dl.find("dt");
-		var resbodies = dl.find("dd");
-		responds.res = new Array(resheads.size());
-		for(var i = 0; i < resheads.size(); i++){
-			responds.res[i] = new Res(resheads.eq(i), resbodies.eq(i));
-		}
-	};
-
-	var createResById = function(){
-		responds.resByID = {};
-		for(var i = 0; i < responds.res.length; i++){
-			if(!responds.resByID[$(responds.res[i].reshead).attr("data-id")]){
-				responds.resByID[$(responds.res[i].reshead).attr("data-id")] = [];
-			}
-			responds.resByID[$(responds.res[i].reshead).attr("data-id")].push(responds.res[i]);
-		}
-	};
 
 	var makeTooltips = function(){
 		for(var i = 0; i < responds.res.length; i++){
@@ -581,6 +602,7 @@ $.noConflict();
 	};
 
 	var initNG = function(){
+		var nglist = {};
 		nglist.ngidText = removeUselessLines(GM_getValue("ngid"));
 		if(nglist.ngidText){
 			nglist.ngid = nglist.ngidText.split("\n");
@@ -617,6 +639,7 @@ $.noConflict();
 		}else{
 			nglist.ngres = [];
 		}
+		return nglist;
 	};
 
 	var applyNG = function(){
@@ -719,7 +742,7 @@ $.noConflict();
 		revivalAllRes();
 		parent.find("dl").prepend(dl.contents());
 		createRes(parent.find("dl"));
-		createResById();
+		createResListById();
 		makeTooltips();
 		setContextMenu();
 		for(var i = 0; i < responds.res.length; i++){
@@ -750,7 +773,7 @@ $.noConflict();
 		revivalAllRes();
 		parent.find("dl").append(dl.contents());
 		createRes(parent.find("dl"));
-		createResById();
+		createResListById();
 		makeTooltips();
 		setContextMenu();
 		for(var i = 0; i < responds.res.length; i++){
@@ -764,7 +787,7 @@ $.noConflict();
 	var initSmallBbs = function(){
 		createRes(parent.find("dl"));
 		if(document.URL.indexOf("http://dic.nicovideo.jp/b/") !== -1 || GM_getValue("tooltipOnDicPage")){
-			createResById();
+			createResListById();
 			makeTooltips();
 		}else{
 			makeIDDiv();
@@ -800,63 +823,108 @@ $.noConflict();
 		}
 	}
 
+	var insertStyle = function(){
+		var idStyle = ".ID{text-decoration:underline; color:black; display:inline;} .IDMulti{text-decoration:underline; color:blue; display:inline;}" +
+					".IDMany{text-decoration:underline; color:red; display:inline;}";
+		var numberStyle = ".Number{text-decoration: underline; display:inline;} .NumberMulti{text-decoration: underline; display:inline; color:blue;}" +
+					".NumberMany{text-decoration: underline; display:inline; color:red;}";
+		var insideTooltipStyle = ".dic{display:inline;}";
+		var onMouseIdStyle = ".ID:hover, .IDMulti:hover, .IDMany:hover, .dic:hover{text-decoration:none;}";
+		var defaultTooltipStyle = ".ID>div, .IDMulti>div, .IDMany>div, .dic>div, .Number>div, .NumberMulti>div, .NumberMany>div, .NumberHandle>div{display:none;}";
+		var onMouseTooltipStyle = ".ID:hover>div, .IDMulti:hover>div, .IDMany:hover>div, .numTooltip:hover>div," + 
+								" .Number:hover>div, .NumberMulti:hover>div, .NumberMany:hover>div, .NumberHandle:hover>div" + 
+								"{color:black; display:inline; position:absolute; background:#f5f5b5; border:solid black 1px; padding;5px; font-size:8pt; overflow:auto;" + 
+								" box-shadow:1px 1px; z-index:10000;}";
+		var leftboxStyle = "div.left-box{border: groove 1px gray; border-radius: 5px; background-image:none;}";
+		var ngStyle = "#ng{display:none;}";
+		var hideMenu = "#topbarRightMenu #bbsLi.selected,#topbarRightMenu #ngLi.selected{display:none;}"; 
+		var sidemenu = "ul#sidemenu li{border:solid 1px; width:100px;} ul#sidemenu li.selected{color:red;}";
+		var contextMenuStyle = "#contextMenu{background : #d4d0c8;color : #000000;display : none;position : absolute;list-style : none;	padding-left : 0px;box-shadow : 1px 1px;}";
+		var contextItemStyle = "#contextMenu li{padding : 3px;}#contextMenu li:hover{background : #0a246a;color : #ffffff;}";
+
+		var styleTag = "<style id='nicoDicBBSViewerCSS' type='text/css'>" + idStyle + numberStyle + insideTooltipStyle + onMouseIdStyle + defaultTooltipStyle + 
+			onMouseTooltipStyle + leftboxStyle + ngStyle + hideMenu + sidemenu + contextMenuStyle + contextItemStyle + "</style>";
+
+		$("link").eq(1).after($(styleTag));
+	};
+
+	var counterAutopagerize = function(){
+		$(document).bind("AutoPagerize_DOMNodeInserted", function(){
+			$("[class^='autopagerize'] , dl:not(#bbsmain) , #autopagerize_message_bar").remove();
+		});
+	};
+
+	var scrollLoader = function(){
+		var reserved = false;
+		setInterval(function(){
+			if(reserved){
+				reserved = false;
+				readNextBbs();
+			}
+		}, 1000);
+			$(window).scroll(function(){
+			if($(".selected").attr("id") === "bbsLi" && GM_getValue("autoLoad") && $("html").scrollTop() + $(window).height() > $("#bbsmain").position().top + $("#bbsmain").height()){
+				reserved = true;
+			}
+		});
+	};
+
 //以下main
-	//var configIDs = ["useNG", "autoLoad", "tooltipOnDicPage", "showIDTooltip", "showResAnchorTooltip", "showResNumberTooltip", "showResHandleTooltip", "classificationID", "classificationResNumber"];
-	//initConfig(configIDs);
-	initConfig(["useNG", "autoLoad", "tooltipOnDicPage", "showIDTooltip", "showResAnchorTooltip", "showResNumberTooltip", "showResHandleTooltip", "classificationID", "classificationResNumber"]);
-/*
-	if(GM_getValue("useNG") === undefined){
-		GM_setValue("useNG", true);
-	}
-	*/
-	$("link").eq(1).after($("<style id='nicoDicBBSViewerCSS' type='text/css'>.ID{text-decoration:underline; color:black; display:inline;} .IDMulti{text-decoration:underline; color:blue; display:inline;} .IDMany{text-decoration:underline; color:red; display:inline;} .Number{text-decoration: underline; display:inline;} .NumberMulti{text-decoration: underline; display:inline; color:blue;} .NumberMany{text-decoration: underline; display:inline; color:red;} .dic{display:inline;} .ID:hover, .IDMulti:hover, .IDMany:hover, .dic:hover{text-decoration:none;} .ID>div, .IDMulti>div, .IDMany>div, .dic>div, .Number>div, .NumberMulti>div, .NumberMany>div, .NumberHandle>div{display:none;} .ID:hover>div, .IDMulti:hover>div, .IDMany:hover>div, .numTooltip:hover>div, .Number:hover>div, .NumberMulti:hover>div, .NumberMany:hover>div, .NumberHandle:hover>div{color:black; display:inline; position:absolute; background:#f5f5b5; border:solid black 1px; padding;5px; font-size:8pt; overflow:auto; box-shadow:1px 1px; z-index:10000;} div.left-box{border: groove 1px gray; border-radius: 5px; background-image:none;} #ng{display:none;} #topbarRightMenu #bbsLi.selected,#topbarRightMenu #ngLi.selected{display:none;} ul#sidemenu li{border:solid 1px; width:100px;} ul#sidemenu li.selected{color:red;} #contextMenu{background : #d4d0c8;color : #000000;display : none;position : absolute;list-style : none;	padding-left : 0px;box-shadow : 1px 1px;}#contextMenu li{padding : 3px;}#contextMenu li:hover{background : #0a246a;color : #ffffff;}</style>"));
-	var parent = $("#bbs");
-	parent.find("dl").attr("id", "bbsmain");
-	var bbsScroll = 0;
-	var pager = parent.find(".pager");
 	var nglist = {};//ngid,ngname,ngresたちのまとめ。
-	initNG();
-	var responds = {};//Resオブジェクトの配列"res"、ResオブジェクトのIDによる連想配列"resByID"が格納。
-	$(".border").remove();
-	/*
-	if(GM_getValue("loadAll")){
-		if(document.URL.indexOf("http://dic.nicovideo.jp/b/") === -1){
-			pager.html("<a href = " + pager.find("a:not(.navi)").eq(0).attr("href") + ">掲示板へ</a>");
-			initSmallBbs();
-		}else{
-			$(document).bind("AutoPagerize_DOMNodeInserted", function(){
-				$("[class^='autopagerize'] , dl:not(#bbsmain)").remove();
-			});
-			var bbsURLs = getBBSURLs(pager.eq(0));
-			setMenu();
-			var back = pager.find("a").eq(0);
-			pager.html("").append(back);
-			parent.find("dl").html("");
-			getOtherBBS(bbsURLs);
-		}
-	}else{*/
-		if(document.URL.indexOf("http://dic.nicovideo.jp/b/") === -1){
+	var responds = {};//Resオブジェクトの配列"res"、ResオブジェクトのIDによる連想配列"resListById"が格納。
+	var main = function(){
+		initConfig(["useNG", "autoLoad", "tooltipOnDicPage", "showIDTooltip", "showResAnchorTooltip", "showResNumberTooltip", "showResHandleTooltip", 
+					"classificationID", "classificationResNumber"]);
+		insertStyle();
+		var parent = $("#bbs");
+		parent.find("dl").attr("id", "bbsmain");
+		var bbsScroll = 0;
+		var pager = parent.find(".pager");
+		nglist = initNG();
+		$(".border").remove();
+		var urlAnalyzer = new UrlAnalyzer();
+		if(urlAnalyzer.inArticlePage()){
 			pager.find(".navi").remove();
 			initSmallBbs();
 		}else{
-			var manager = new ManagerToReadBbs(getBBSURLs(pager.eq(0)));
-			$(document).bind("AutoPagerize_DOMNodeInserted", function(){
-				$("[class^='autopagerize'] , dl:not(#bbsmain) , #autopagerize_message_bar").remove();
-			});
-			var reserved = false;
-			setInterval(function(){
-				if(reserved){
-					reserved = false;
-					readNextBbs();
-				}
-			}, 1000);
+			var manager = new ManagerToReadBbs(urlAnalyzer.getBBSURLs(pager.eq(0)));
+			counterAutopagerize();
 			initPagerForThirtyBbs();
 			initSmallBbs();
-			$(window).scroll(function(){
-				if($(".selected").attr("id") === "bbsLi" && GM_getValue("autoLoad") && $("html").scrollTop() + $(window).height() > $("#bbsmain").position().top + $("#bbsmain").height()){
-					reserved = true;
-				}
-			});
+			scrollLoader();
 		}
-	//}
+	};
+	//main();
+	//-----test用-----
+	var c = net_threeaster_NicoDicBBSViewer;
+	c.removeUselessLines = removeUselessLines;
+	c.setContextMenu = setContextMenu;
+	c.Res = Res;
+	c.makeIDDiv = makeIDDiv;
+	c.getResByNumber = getResByNumber;
+	c.controlTooltip = controlTooltip;
+	c.getOtherBBS = getOtherBBS;
+	c.delayiframe = delayiframe;
+	c.makeTooltips = makeTooltips;
+	c.bindMenu = bindMenu;
+	c.recover = recover;
+	c.showres = showres;
+	c.ajustSideMenu = ajustSideMenu;
+	c.getCheckbox = getCheckbox;
+	c.setMenu = setMenu;
+	c.initNG = initNG;
+	c.applyNG = applyNG;
+	c.revivalAllRes = revivalAllRes;
+	c.ManagerToReadBbs = ManagerToReadBbs;
+	c.readPreviousBbs = readPreviousBbs;
+	c.prependBbs = prependBbs;
+	c.readNextBbs = readNextBbs;
+	c.nextBbs = nextBbs;
+	c.initSmallBbs = initSmallBbs;
+	c.initPagerForThirtyBbs = initPagerForThirtyBbs;
+	c.initConfig = initConfig;
+	c.nglist = nglist;
+	c.insertStyle = insertStyle;
+	c.UrlAnalyzer = UrlAnalyzer;
+	c.ResList = ResList;
 })(jQuery);
