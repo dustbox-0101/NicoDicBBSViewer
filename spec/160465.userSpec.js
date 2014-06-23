@@ -372,21 +372,21 @@ describe("", function(){
 
 	describe("Resのテスト", function(){
 
-		describe("makeIDDivRefrectingSameIDのテスト", function(){
-			var cloneHeadAndBody = function(copingIndex, copiedIndex){
-				reshead[copingIndex] = reshead[copiedIndex];
-				resbody[copingIndex] = resbody[copiedIndex]
-			}
+		describe("IDに関する処理のテスト", function(){
+							var cloneHeadAndBody = function(copingIndex, copiedIndex){
+					reshead[copingIndex] = reshead[copiedIndex];
+					resbody[copingIndex] = resbody[copiedIndex]
+				}
 
-			var list;
-			var reshead;
-			var resbody;
-			var res1;
-			var res2;
-			var res3;
-			var res4;
-			var res5;
-			var res6;
+				var list;
+				var reshead;
+				var resbody;
+				var res1;
+				var res2;
+				var res3;
+				var res4;
+				var res5;
+				var res6;
 			beforeEach(function(){
 				list = new c.ResList();
 				reshead = [];
@@ -417,98 +417,122 @@ describe("", function(){
 	   						 	'：2014/03/03(月) 15:04:54 ID: 7vRpsL9G6r</dt>';
 	   			resbody[11] = '<dd>5</dd>';
 	   			cloneHeadAndBody(12, 11);
+
 	   			var html = constructDl(reshead, resbody);
 	   			list.createRes($(html));
 	   			list.createResListById();
+
 	   			res1 = list.resList[0];
 	   			res2 = list.resList[1];
 	   			res3 = list.resList[7];
 	   			res4 = list.resList[9];
 	   			res5 = list.resList[10];
 	   			res6 = list.resList[12];
-			})
-
-			it("classificationIDフラグが立っている時、createRes,createResListByIdの後にmakeIDDivRefrectingSameIDをすると、同一IDの数と何番目か、また色分けがされる", function(){
-				//serUp
-	   			GM_setValue("classificationID", true);
-	  			//exercise
-	  			res1.makeIDDivReflectingSameID(list.resListById);
-	  			res2.makeIDDivReflectingSameID(list.resListById);
-	  			res3.makeIDDivReflectingSameID(list.resListById);
-	  			//verify
-	  			expect(res1.reshead.html()).not.toMatch(/\[/);
-	  			expect(res2.reshead.html()).toMatch(/\[1\/3\]/);
-	  			expect(res3.reshead.html()).toMatch(/\[4\/5\]/);
-	  			expect(res1.reshead.find("div").hasClass("ID")).toEqual(true);
-	  			expect(res2.reshead.find("div").hasClass("IDMulti")).toEqual(true);
-	  			expect(res3.reshead.find("div").hasClass("IDMany")).toEqual(true);
 			});
 
-			it("classificationIDフラグが立っている時、createRes,createResListByIdの後にmakeIDDivRefrectingSameIDをすると、IDの数は付加されず、class:IDが付加される", function(){
-				//exercise
-	  			res1.makeIDDivReflectingSameID(list.resListById);
-	  			res2.makeIDDivReflectingSameID(list.resListById);
-	  			res3.makeIDDivReflectingSameID(list.resListById);
-	  			//verify
-	  			expect(res1.reshead.html()).not.toMatch(/\[/);
-	  			expect(res2.reshead.html()).not.toMatch(/\[/);
-	  			expect(res3.reshead.html()).not.toMatch(/\[/);
-	  			expect(res1.reshead.find("div").hasClass("ID")).toEqual(true);
-	  			expect(res2.reshead.find("div").hasClass("ID")).toEqual(true);
-	  			expect(res3.reshead.find("div").hasClass("ID")).toEqual(true);		
-	  		});
+			describe("makeIDDivRefrectingSameIDのテスト", function(){
 
-	  		it("makeIDDivRefrectingSameIDをした後、再度makeIDDivRefrectingSameIDをすると、IDの数とclassが付け替えられる", function(){
-	  			//setUp
-	  			GM_setValue("classificationID", true);
-	  			res1.makeIDDivReflectingSameID(list.resListById);
-	  			res2.makeIDDivReflectingSameID(list.resListById);
-	  			res3.makeIDDivReflectingSameID(list.resListById);
-	   			res4.makeIDDivReflectingSameID(list.resListById);
-	  			res5.makeIDDivReflectingSameID(list.resListById);
-	  			res6.makeIDDivReflectingSameID(list.resListById);
-	  			cloneHeadAndBody(13, 9);
-	  			for(var i = 14; i <= 17; i++){
-	  				cloneHeadAndBody(i, 10);
-	  			}
-	  			for(var i = 18; i <= 22; i++){
-	  				cloneHeadAndBody(i, 11);
-	  			}
-	  			var html = "<dl>";
-	  			for(var i = 0; i < reshead.length; i++){
-	  				html = html + reshead[i] + resbody[i];
-	  			}
-	  			html = html + "</dl>";
-	   			list.createRes($(html));
-	   			list.createResListById();
-	    		res1 = list.resList[0];
-	   			res2 = list.resList[1];
-	   			res3 = list.resList[7];
-	   			res4 = list.resList[9];
-	   			res5 = list.resList[10];
-	   			res6 = list.resList[12];
-	  			//exercise
-	  			res1.makeIDDivReflectingSameID(list.resListById);
-	  			res2.makeIDDivReflectingSameID(list.resListById);
-	  			res3.makeIDDivReflectingSameID(list.resListById);
-	   			res4.makeIDDivReflectingSameID(list.resListById);
-	  			res5.makeIDDivReflectingSameID(list.resListById);
-	  			res6.makeIDDivReflectingSameID(list.resListById);
-	  			//verify
-	  			expect(res1.reshead.html()).not.toMatch(/\[/);
-	  			expect(res2.reshead.html()).toMatch(/\[1\/3\]/);
-	  			expect(res3.reshead.html()).toMatch(/\[4\/5\]/);
-	  			expect(res4.reshead.html()).toMatch(/\[1\/2\]/);
-	  			expect(res5.reshead.html()).toMatch(/\[1\/5\]/);
-	  			expect(res6.reshead.html()).toMatch(/\[2\/7\]/);
-	  			expect(res1.reshead.find("div").hasClass("ID")).toEqual(true);
-	  			expect(res2.reshead.find("div").hasClass("IDMulti")).toEqual(true);
-	  			expect(res3.reshead.find("div").hasClass("IDMany")).toEqual(true);
-	  			expect(res4.reshead.find("div").hasClass("IDMulti")).toEqual(true);
-	  			expect(res5.reshead.find("div").hasClass("IDMany")).toEqual(true);
-	  			expect(res6.reshead.find("div").hasClass("IDMany")).toEqual(true);
-	  		});
+				it("classificationIDフラグが立っている時、createRes,createResListByIdの後にmakeIDDivRefrectingSameIDをすると、同一IDの数と何番目か、また色分けがされる", function(){
+					//serUp
+		   			GM_setValue("classificationID", true);
+		  			//exercise
+		  			res1.makeIDDivReflectingSameID(list.resListById);
+		  			res2.makeIDDivReflectingSameID(list.resListById);
+		  			res3.makeIDDivReflectingSameID(list.resListById);
+		  			//verify
+		  			expect(res1.reshead.html()).not.toMatch(/\[/);
+		  			expect(res2.reshead.html()).toMatch(/\[1\/3\]/);
+		  			expect(res3.reshead.html()).toMatch(/\[4\/5\]/);
+		  			expect(res1.reshead.find("div").hasClass("ID")).toEqual(true);
+		  			expect(res2.reshead.find("div").hasClass("IDMulti")).toEqual(true);
+		  			expect(res3.reshead.find("div").hasClass("IDMany")).toEqual(true);
+				});
+
+				it("classificationIDフラグが立っている時、createRes,createResListByIdの後にmakeIDDivRefrectingSameIDをすると、IDの数は付加されず、class:IDが付加される", function(){
+					//exercise
+		  			res1.makeIDDivReflectingSameID(list.resListById);
+		  			res2.makeIDDivReflectingSameID(list.resListById);
+		  			res3.makeIDDivReflectingSameID(list.resListById);
+		  			//verify
+		  			expect(res1.reshead.html()).not.toMatch(/\[/);
+		  			expect(res2.reshead.html()).not.toMatch(/\[/);
+		  			expect(res3.reshead.html()).not.toMatch(/\[/);
+		  			expect(res1.reshead.find("div").hasClass("ID")).toEqual(true);
+		  			expect(res2.reshead.find("div").hasClass("ID")).toEqual(true);
+		  			expect(res3.reshead.find("div").hasClass("ID")).toEqual(true);		
+		  		});
+
+		  		it("makeIDDivRefrectingSameIDをした後、再度makeIDDivRefrectingSameIDをすると、IDの数とclassが付け替えられる", function(){
+		  			//setUp
+		  			GM_setValue("classificationID", true);
+		  			res1.makeIDDivReflectingSameID(list.resListById);
+		  			res2.makeIDDivReflectingSameID(list.resListById);
+		  			res3.makeIDDivReflectingSameID(list.resListById);
+		   			res4.makeIDDivReflectingSameID(list.resListById);
+		  			res5.makeIDDivReflectingSameID(list.resListById);
+		  			res6.makeIDDivReflectingSameID(list.resListById);
+		  			cloneHeadAndBody(13, 9);
+		  			for(var i = 14; i <= 17; i++){
+		  				cloneHeadAndBody(i, 10);
+		  			}
+		  			for(var i = 18; i <= 22; i++){
+		  				cloneHeadAndBody(i, 11);
+		  			}
+		  			var html = "<dl>";
+		  			for(var i = 0; i < reshead.length; i++){
+		  				html = html + reshead[i] + resbody[i];
+		  			}
+		  			html = html + "</dl>";
+		   			list.createRes($(html));
+		   			list.createResListById();
+		    		res1 = list.resList[0];
+		   			res2 = list.resList[1];
+		   			res3 = list.resList[7];
+		   			res4 = list.resList[9];
+		   			res5 = list.resList[10];
+		   			res6 = list.resList[12];
+		  			//exercise
+		  			res1.makeIDDivReflectingSameID(list.resListById);
+		  			res2.makeIDDivReflectingSameID(list.resListById);
+		  			res3.makeIDDivReflectingSameID(list.resListById);
+		   			res4.makeIDDivReflectingSameID(list.resListById);
+		  			res5.makeIDDivReflectingSameID(list.resListById);
+		  			res6.makeIDDivReflectingSameID(list.resListById);
+		  			//verify
+		  			expect(res1.reshead.html()).not.toMatch(/\[/);
+		  			expect(res2.reshead.html()).toMatch(/\[1\/3\]/);
+		  			expect(res3.reshead.html()).toMatch(/\[4\/5\]/);
+		  			expect(res4.reshead.html()).toMatch(/\[1\/2\]/);
+		  			expect(res5.reshead.html()).toMatch(/\[1\/5\]/);
+		  			expect(res6.reshead.html()).toMatch(/\[2\/7\]/);
+		  			expect(res1.reshead.find("div").hasClass("ID")).toEqual(true);
+		  			expect(res2.reshead.find("div").hasClass("IDMulti")).toEqual(true);
+		  			expect(res3.reshead.find("div").hasClass("IDMany")).toEqual(true);
+		  			expect(res4.reshead.find("div").hasClass("IDMulti")).toEqual(true);
+		  			expect(res5.reshead.find("div").hasClass("IDMany")).toEqual(true);
+		  			expect(res6.reshead.find("div").hasClass("IDMany")).toEqual(true);
+		  		});
+			});
+
+			describe("makeIDTooltipのテスト", function(){
+				beforeEach(function(){
+					//setUp
+					GM_setValue("classificationID", true);
+					res2.makeIDDivReflectingSameID(list.resListById);
+				});
+
+				it("createResList、createResListById、の後にmakeIDTooltipをすると、mouseenterイベントでツールチップが出る", function(){
+					//exercise
+					res2.makeIDTooltip(list.resListById);
+					res2.reshead.find("div[class^='ID']").trigger("mouseenter");
+					//verify
+					expect(res2.reshead.find("div[class^='ID'] > div").size()).toEqual(1);
+					expect(res2.reshead.find("div[class^='ID'] > div .reshead").size()).toEqual(3);
+				});
+			});
 		});
+
+
 
 		describe("makeNumberDivのテスト", function(){
 			var reshead;

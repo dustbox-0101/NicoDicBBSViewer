@@ -243,8 +243,8 @@ var net_threeaster_NicoDicBBSViewer = {};
 	}
 
 
-	Res.prototype.makeIDTooltip = function(){
-		var sameIDRes = responds.resListById[this.reshead.attr("data-id")];
+	Res.prototype.makeIDTooltip = function(resListById){
+		var sameIDRes = resListById[this.reshead.attr("data-id")];
 		var divID = this.reshead.find("div[class^='ID']");
 		divID.unbind("mouseenter").unbind("mouseleave").hover(function(){
 			var tooltip = $("<div></div>").click(function(e){e.stopPropagation();});
