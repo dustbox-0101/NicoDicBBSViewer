@@ -81,6 +81,13 @@ var net_threeaster_NicoDicBBSViewer = {};
 			this.resListById[$(this.resList[i].reshead).attr("data-id")].push(this.resList[i]);
 		}
 	};
+	ResList.prototype.createResListByNumber = function(){
+		this.resListByNumber = [];
+		for(var i = 0; i < this.resList.length; i++){
+			var res = this.resList[i]
+			this.resListByNumber[res.reshead.attr("data-number")] = res;
+		}
+	}
 
 	//-----BbsInitializer-----
 	/*
@@ -239,7 +246,6 @@ var net_threeaster_NicoDicBBSViewer = {};
 		}else{
 			this.reshead.html(this.reshead.html().replace(/a>([0-9]+)/, "a><div class='NumberMany'>$1</div>"));
 		}
-		console.log(this.reshead.html());
 	}
 
 
@@ -264,23 +270,37 @@ var net_threeaster_NicoDicBBSViewer = {};
 		});
 	};
 
-	Res.prototype.makeNumTooltip = function(){
+	Res.prototype.makeNumTooltip = function(resListByNumber){
 		this.resbody.find("a.dic").filter(function(){return $(this).html().indexOf("&gt;&gt;") !== -1}).each(function(){
 			var self = $(this);
 			var num = self.html().split("&gt;").join("").split("-");
+			for(var i = 0; i < num.length; i++){
+				num[i] = num[i] - 0;
+			}
 			//self.attr("href", "#r" + num[0]);
 			self.attr("href", "#" + num[0]);
 			self.removeAttr("target");
 			self.wrap("<span class='numTooltip'></span>").parent().unbind("mouseenter").unbind("mouseleave").hover(function(){
 				var self = $(this);
 				var tooltip = $("<div></div>");
-				if(num.length == 1 || !num[1]){
-					tooltip.append(getResByNumber(num[0]).reshead.clone().find("a").removeAttr("id").end());
-					tooltip.append(getResByNumber(num[0]).resbody.clone().find("a").removeAttr("id").end());
+				if(num.length === 1 || !num[1]){
+					var res = resListByNumber[num[0]];
+					if(res === undefined){
+						return;
+					}
+					tooltip.append(res.reshead.clone().find("a").removeAttr("id").end());
+					tooltip.append(res.resbody.clone().find("a").removeAttr("id").end());
 				}else{
 					for(var i = num[0]; i <= num[1]; i++){
-						tooltip.append(getResByNumber(i).reshead.clone().find("a").removeAttr("id").end());
-						tooltip.append(getResByNumber(i).resbody.clone().find("a").removeAttr("id").end());
+						var res = resListByNumber[i];
+						if(res === undefined){
+							continue;
+						}
+						tooltip.append(res.reshead.clone().find("a").removeAttr("id").end());
+						tooltip.append(res.resbody.clone().find("a").removeAttr("id").end());
+					}
+					if(tooltip.html() === $("<div></div>").html()){
+						return;
 					}
 				}
 				self.append(tooltip);
@@ -317,7 +337,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 		});
 	}
 	
-	Res.prototype.makeNumberHandleTooltip = function(){
+	Res.prototype.makeNumberHandleTooltip = function(resListByNumber){
 		var nameSpan = this.reshead.find(".name");
 		var name = nameSpan.html();
 		var transformedName = name.replace(/[０１２３４５６７８９]/g, function(c){return "０１２３４５６７８９".indexOf(c);});
@@ -325,8 +345,12 @@ var net_threeaster_NicoDicBBSViewer = {};
 			nameSpan.wrap("<span class='NumberHandle'></span>").parent().unbind("mouseenter").unbind("mouseleave").hover(function(){
 				var self = $(this);
 				var tooltip = $("<div></div>");
-				tooltip.append(getResByNumber(transformedName).reshead.clone().find("a").removeAttr("id").end());
-				tooltip.append(getResByNumber(transformedName).resbody.clone().find("a").removeAttr("id").end());
+				var res = resListByNumber[transformedName];
+				if(res === undefined){
+					return;
+				}
+				tooltip.append(res.reshead.clone().find("a").removeAttr("id").end());
+				tooltip.append(res.resbody.clone().find("a").removeAttr("id").end());
 				self.append(tooltip);
 				self.focus();
 				controlTooltip(tooltip);

@@ -368,6 +368,26 @@ describe("", function(){
 				expect(resListById["VEXO5K3Cit"][1].resbody.html()).toEqual($(resbody3).html());
 			});
 		});
+		describe("createResListByNumberのテスト", function(){
+			it("createResした後にcreateResListByNumberすると、レス番号をindexにもつ配列が作られる", function(){
+				//setUp
+				var sut = new c.ResList();
+				var reshead = [];
+				var resbody = [];
+				reshead[0] = '<dt class="reshead"><a name="5" class="resnumhead"></a>5 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+				resbody[0] = '<dd class="resbody"><a href="/b/a/name/1-#2" rel="nofollow" target="_blank" class="dic">&gt;&gt;7</a></dd>';
+				reshead[1] = '<dt class="reshead"><a name="6" class="resnumhead"></a>6 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+				resbody[1] = '<dd class="resbody"><a href="/b/a/name/1-#2" rel="nofollow" target="_blank" class="dic">&gt;&gt;2</a></dd>';
+	   			var html = constructDl(reshead, resbody);
+	   			sut.createRes($(html));
+	   			//exercise
+	   			sut.createResListByNumber();
+	   			//verify
+	   			var list = sut.resListByNumber;
+	   			expect(list[0]).toBeUndefined();
+	   			expect(list[5]).toEqual(sut.resList[0]);
+			})
+		})
 	});
 
 	describe("Resのテスト", function(){
@@ -529,12 +549,30 @@ describe("", function(){
 					expect(res2.reshead.find("div[class^='ID'] > div").size()).toEqual(1);
 					expect(res2.reshead.find("div[class^='ID'] > div .reshead").size()).toEqual(3);
 				});
+
+				it("mouseenterで出たツールチップがmouseleaveで消える", function(){
+					//setUp
+					res2.makeIDTooltip(list.resListById);
+					res2.reshead.find("div[class^='ID']").trigger("mouseenter");
+					//exercise
+					res2.reshead.find("div[class^='ID']").trigger("mouseleave");
+					//verify
+					expect(res2.reshead.find("div[class^='ID'] > div").size()).toEqual(0);
+				});
+
+				it("二度makeIDTooltipをしてもmouseenterで一つだけツールチップが出る", function(){
+					//exercise
+					res2.makeIDTooltip(list.resListById);
+					res2.makeIDTooltip(list.resListById);
+					res2.reshead.find("div[class^='ID']").trigger("mouseenter");
+					//verify
+					expect(res2.reshead.find("div[class^='ID'] > div").size()).toEqual(1);
+					expect(res2.reshead.find("div[class^='ID'] > div .reshead").size()).toEqual(3);
+				});
 			});
 		});
 
-
-
-		describe("makeNumberDivのテスト", function(){
+		describe("レス番に関するテスト", function(){
 			var reshead;
 			var resbody;
 			var list;
@@ -561,60 +599,216 @@ describe("", function(){
 		 		res[1] = list.resList[1];
 		 		res[2] = list.resList[2];
 		 		res[3] = list.resList[3];
-			})
-
-			it("classificationResNumberフラグが立っている時、createIDの後makeNumberDivをすると、リンクされているレスの番号に下線、及び色分けがされる", function(){
-				//setUp
-		 		GM_setValue("classificationResNumber", true);
-		 		//exsecise
-		 		res[0].makeNumberDiv(list.resList);
-		 		res[1].makeNumberDiv(list.resList);
-		 		res[2].makeNumberDiv(list.resList);
-		 		res[3].makeNumberDiv(list.resList);
-		 		//verify
-		 		expect(res[0].reshead.find("div").size()).toEqual(0);
-		 		expect(res[1].reshead.find("div").hasClass("NumberMulti")).toEqual(true);
-		 		expect(res[2].reshead.find("div").hasClass("NumberMany")).toEqual(true);
-		 		expect(res[3].reshead.find("div").hasClass("Number")).toEqual(true);
-
 			});
 
-			it("classificationResNumberフラグが立っている時、createIDの後makeNumberDivをすると、リンクされているレスの番号に下線はひかれるが、色分けはされない", function(){
-				//setUp
-		 		//exsecise
-		 		res[0].makeNumberDiv(list.resList);
-		 		res[1].makeNumberDiv(list.resList);
-		 		res[2].makeNumberDiv(list.resList);
-		 		res[3].makeNumberDiv(list.resList);
-		 		//verify
-		 		expect(res[0].reshead.find("div").size()).toEqual(0);
-		 		expect(res[1].reshead.find("div").hasClass("Number")).toEqual(true);
-		 		expect(res[2].reshead.find("div").hasClass("Number")).toEqual(true);
-		 		expect(res[3].reshead.find("div").hasClass("Number")).toEqual(true);
+			describe("makeNumberDivのテスト", function(){
 
+				it("classificationResNumberフラグが立っている時、createIDの後makeNumberDivをすると、リンクされているレスの番号に下線、及び色分けがされる", function(){
+					//setUp
+			 		GM_setValue("classificationResNumber", true);
+			 		//exsecise
+			 		res[0].makeNumberDiv(list.resList);
+			 		res[1].makeNumberDiv(list.resList);
+			 		res[2].makeNumberDiv(list.resList);
+			 		res[3].makeNumberDiv(list.resList);
+			 		//verify
+			 		expect(res[0].reshead.find("div").size()).toEqual(0);
+			 		expect(res[1].reshead.find("div").hasClass("NumberMulti")).toEqual(true);
+			 		expect(res[2].reshead.find("div").hasClass("NumberMany")).toEqual(true);
+			 		expect(res[3].reshead.find("div").hasClass("Number")).toEqual(true);
+
+				});
+
+				it("classificationResNumberフラグが立っている時、createIDの後makeNumberDivをすると、リンクされているレスの番号に下線はひかれるが、色分けはされない", function(){
+					//setUp
+			 		//exsecise
+			 		res[0].makeNumberDiv(list.resList);
+			 		res[1].makeNumberDiv(list.resList);
+			 		res[2].makeNumberDiv(list.resList);
+			 		res[3].makeNumberDiv(list.resList);
+			 		//verify
+			 		expect(res[0].reshead.find("div").size()).toEqual(0);
+			 		expect(res[1].reshead.find("div").hasClass("Number")).toEqual(true);
+			 		expect(res[2].reshead.find("div").hasClass("Number")).toEqual(true);
+			 		expect(res[3].reshead.find("div").hasClass("Number")).toEqual(true);
+
+				});
+
+				it("makeNumberDivをしなおしても、下線、色分けはなされる", function(){
+					//setUp
+					GM_setValue("classificationResNumber", true);
+					reshead[4] = '<dt class="reshead"><a name="5" class="resnumhead"></a>5 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+					resbody[4] = '<dd class="resbody"><a href="/b/a/name/1-#2" rel="nofollow" target="_blank" class="dic">&gt;&gt;7</a></dd>';
+					reshead[5] = '<dt class="reshead"><a name="6" class="resnumhead"></a>6 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+					resbody[5] = '<dd class="resbody"><a href="/b/a/name/1-#2" rel="nofollow" target="_blank" class="dic">&gt;&gt;2</a></dd>';
+					var html = constructDl(reshead, resbody);
+					list = new c.ResList();
+			 		list.createRes($(html));
+			 		//exercise
+			 		res[0].makeNumberDiv(list.resList);
+			 		res[1].makeNumberDiv(list.resList);
+			 		res[2].makeNumberDiv(list.resList);
+			 		res[3].makeNumberDiv(list.resList);
+			 		//verify
+			 		expect(res[0].reshead.find("div").size()).toEqual(0);
+			 		expect(res[1].reshead.find("div").hasClass("NumberMany")).toEqual(true);
+			 		expect(res[2].reshead.find("div").hasClass("NumberMany")).toEqual(true);
+			 		expect(res[3].reshead.find("div").hasClass("Number")).toEqual(true);
+				});
 			});
 
-			it("makeNumberDivをしなおしても、下線、色分けはなされる", function(){
-				//setUp
-				GM_setValue("classificationResNumber", true);
-				reshead[4] = '<dt class="reshead"><a name="5" class="resnumhead"></a>5 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
-				resbody[4] = '<dd class="resbody"><a href="/b/a/name/1-#2" rel="nofollow" target="_blank" class="dic">&gt;&gt;7</a></dd>';
-				reshead[5] = '<dt class="reshead"><a name="6" class="resnumhead"></a>6 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
-				resbody[5] = '<dd class="resbody"><a href="/b/a/name/1-#2" rel="nofollow" target="_blank" class="dic">&gt;&gt;2</a></dd>';
-				var html = constructDl(reshead, resbody);
-				list = new c.ResList();
-		 		list.createRes($(html));
-		 		//exercise
-		 		res[0].makeNumberDiv(list.resList);
-		 		res[1].makeNumberDiv(list.resList);
-		 		res[2].makeNumberDiv(list.resList);
-		 		res[3].makeNumberDiv(list.resList);
-		 		//verify
-		 		expect(res[0].reshead.find("div").size()).toEqual(0);
-		 		expect(res[1].reshead.find("div").hasClass("NumberMany")).toEqual(true);
-		 		expect(res[2].reshead.find("div").hasClass("NumberMany")).toEqual(true);
-		 		expect(res[3].reshead.find("div").hasClass("Number")).toEqual(true);
+			describe("makeLinkedNumberTooltipのテスト", function(){
+				it("makeNumberDivの後にmakeLinkedNumberTooltipをすると、mouseenterでツールチップが出る", function(){
+					//setUp
+			 		res[0].makeNumberDiv(list.resList);
+			 		res[1].makeNumberDiv(list.resList);
+			 		res[2].makeNumberDiv(list.resList);
+			 		res[3].makeNumberDiv(list.resList);
+			 		//exercise
+			 		for(var i = 0; i < res.length; i++){
+			 			res[i].makeLinkedNumberTooltip();
+			 			res[i].reshead.find("div[class^='Number']").trigger("mouseenter");
+			 		}
+			 		//verify
+			 		expect(res[0].reshead.find("div[class^='Number'] div:not([class^='Number'])").size()).toEqual(0);
+			 		expect(res[1].reshead.find("div[class^='Number'] div:not([class^='Number'])").size()).toEqual(1);
+			 		expect(res[1].reshead.find("div[class^='Number'] div:not([class^='Number']) .reshead").size()).toEqual(3);
+				});
+
+				it("mouseenterで出たツールチップがmouseleaveで消える", function(){
+					//setUp
+			 		res[0].makeNumberDiv(list.resList);
+			 		res[1].makeNumberDiv(list.resList);
+			 		res[2].makeNumberDiv(list.resList);
+			 		res[3].makeNumberDiv(list.resList);
+			 		//exercise
+			 		for(var i = 0; i < res.length; i++){
+			 			res[i].makeLinkedNumberTooltip();
+			 			res[i].reshead.find("div[class^='Number']").trigger("mouseenter");
+			 			res[i].reshead.find("div[class^='Number']").trigger("mouseleave");
+			 		}
+			 		//verify
+			 		expect(res[0].reshead.find("div[class^='Number'] div:not([class^='Number'])").size()).toEqual(0);
+			 		expect(res[1].reshead.find("div[class^='Number'] div:not([class^='Number'])").size()).toEqual(0);
+				});
 			});
+		});
+	});
+
+	describe("makeNumTooltipのテスト", function(){
+		var reshead;
+		var resbody;
+		var res;
+		beforeEach(function(){
+			reshead = [];
+			resbody = [];
+			res = [];
+			reshead[0] = '<dt class="reshead"><a name="31" class="resnumhead"></a>31 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+			resbody[0] = '<dd class="resbody"><a href="/b/a/name/1-#4" rel="nofollow" target="_blank" class="dic">&gt;&gt;4</a></dd>';
+			reshead[1] = '<dt class="reshead"><a name="32" class="resnumhead"></a>32 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+			resbody[1] = '<dd class="resbody"><a href="/b/a/name/31-#31" rel="nofollow" target="_blank" class="dic">&gt;&gt;31</a></dd>';
+			reshead[2] = '<dt class="reshead"><a name="33" class="resnumhead"></a>33 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+			resbody[2] = '<dd class="resbody"><a href="/b/a/name/31-#31" rel="nofollow" target="_blank" class="dic">&gt;&gt;31-32</a></dd>';
+			var html = constructDl(reshead, resbody);
+			list = new c.ResList();
+			list.createRes($(html));
+			list.createResListByNumber();
+			for(var i = 0; i < list.resList.length; i++){
+				res[i] = list.resList[i];
+				res[i].makeNumTooltip(list.resListByNumber);
+			}
+		});
+
+		it("createResListの後makeNumTooltipをしても、参照先がないならばmouseenterでツールチップがでない", function(){
+			//exercise
+			res[0].resbody.find("a.dic").trigger("mouseenter");
+			//verify
+			expect(res[0].resbody.find("span.numTooltip div").size()).toEqual(0);
+			//tearDown
+			res[0].resbody.find("a.dic").trigger("mouseleave");
+		});
+
+		it("createResListの後makeNumTooltipをすると、mouseenterで参照先のツールチップが出る", function(){
+			//exercise
+			res[1].resbody.find("a.dic").trigger("mouseenter");
+			//verify
+			expect(res[1].resbody.find("span.numTooltip div").size()).toEqual(1);
+			expect(res[1].resbody.find("span.numTooltip div .reshead").size()).toEqual(1);
+			//tearDown
+			res[1].resbody.find("a.dic").trigger("mouseleave");
+		});
+
+		it("makeNumToolTipをした状態で、mouseenterをした後mouseleaveすればツールチップは消える", function(){
+			//setUp
+			res[1].resbody.find("a.dic").trigger("mouseenter");
+			//exercise
+			res[1].resbody.find("a.dic").trigger("mouseleave");
+			//verify
+			expect(res[1].resbody.find("span.numTooltip div").size()).toEqual(0);
+		});
+
+		it("createResListの後makeNumTooltipをすると、mouseenterで参照先の範囲のツールチップが出る", function(){
+			//exercise
+			res[2].resbody.find("a.dic").trigger("mouseenter");
+			//verify
+			expect(res[2].resbody.find("span.numTooltip div").size()).toEqual(1);
+			expect(res[2].resbody.find("span.numTooltip div .reshead").size()).toEqual(2);
+			//tearDown
+			res[2].resbody.find("a.dic").trigger("mouseleave");
+		});
+	});
+
+	describe("makeNumberHandleTooltipのテスト", function(){
+		var reshead;
+		var resbody;
+		var res;
+		var list;
+		beforeEach(function(){
+			reshead = [];
+			resbody = [];
+			res = [];
+			reshead[0] = '<dt class="reshead"><a name="31" class="resnumhead"></a>31 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+			resbody[0] = '<dd class="resbody"><a href="/b/a/name/1-#4" rel="nofollow" target="_blank" class="dic">&gt;&gt;4</a></dd>';
+			reshead[1] = '<dt class="reshead"><a name="32" class="resnumhead"></a>32 ： <span class="name">1</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+			resbody[1] = '<dd class="resbody"><a href="/b/a/name/31-#31" rel="nofollow" target="_blank" class="dic">&gt;&gt;31</a></dd>';
+			reshead[2] = '<dt class="reshead"><a name="33" class="resnumhead"></a>33 ： <span class="name">31</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+			resbody[2] = '<dd class="resbody"><a href="/b/a/name/31-#31" rel="nofollow" target="_blank" class="dic">&gt;&gt;31-32</a></dd>';
+			reshead[3] = '<dt class="reshead"><a name="33" class="resnumhead"></a>３３ ： <span class="name">31</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+			resbody[3] = '<dd class="resbody"><a href="/b/a/name/31-#31" rel="nofollow" target="_blank" class="dic">&gt;&gt;31-32</a></dd>';
+			var html = constructDl(reshead, resbody);
+			list = new c.ResList();
+			list.createRes($(html));
+			list.createResListByNumber();
+			for(var i = 0; i < list.resList.length; i++){
+				res[i] = list.resList[i];
+			}
+		});
+
+		it("createResListの後makeNumberHandleTooltipをすれば、ハンドルにmouseenterでハンドルのツールチップが出る", function(){
+			//exercise
+			for(var i = 0; i < list.resList.length; i++){
+				res[i].makeNumberHandleTooltip(list.resListByNumber);
+				res[i].reshead.find("span.NumberHandle").trigger("mouseenter");
+			}
+			//verify
+			expect(res[0].reshead.find("span.NumberHandle div").size()).toEqual(0);
+			expect(res[1].reshead.find("span.NumberHandle div").size()).toEqual(0);
+			expect(res[2].reshead.find("span.NumberHandle div").size()).toEqual(1);
+			expect(res[3].reshead.find("span.NumberHandle div").size()).toEqual(1);
+		});
+
+		it("mouseenterで出たツールチップがmouseleaveで消える", function(){
+			//exercise
+			for(var i = 0; i < list.resList.length; i++){
+				res[i].makeNumberHandleTooltip(list.resListByNumber);
+				res[i].reshead.find("span.NumberHandle").trigger("mouseenter");
+				res[i].reshead.find("span.NumberHandle").trigger("mouseleave");
+			}
+			//verify
+			expect(res[0].reshead.find("span.NumberHandle div").size()).toEqual(0);
+			expect(res[1].reshead.find("span.NumberHandle div").size()).toEqual(0);
+			expect(res[2].reshead.find("span.NumberHandle div").size()).toEqual(0);
+			expect(res[3].reshead.find("span.NumberHandle div").size()).toEqual(0);
 		});
 	});
 });
