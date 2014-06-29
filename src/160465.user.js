@@ -52,10 +52,25 @@ var net_threeaster_NicoDicBBSViewer = {};
 		}
 		return bbsURLs;
 	};
+	UrlAnalyzer.prototype.isPageOf = function(url){
+		var extract = function(url){
+			if(url.indexOf("a/") !== -1){
+				url = url.split("a/")[1];
+			}
+			url = url.split("/")[0];
+			url = url.split(":")[0];
+			url = url.split("#")[0];
+			return url;
+		};
+		var nowUrl = this.getNowUrl();
+		url = extract(url);
+		nowUrl = extract(nowUrl);
+		return url === nowUrl;
+	};
 
-	//-----ResList-----
-	function ResList(){}
-	ResList.prototype.createRes =  function(dl){
+	//-----ResCollection-----
+	function ResCollection(){}
+	ResCollection.prototype.createResList =  function(dl){
 		dl.find("dt").each(function(){
 			var self = $(this);
 			self.attr("data-number", self.find("a").eq(0).attr("name"));
@@ -72,7 +87,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 			this.resList[i] = new Res(resheads.eq(i), resbodies.eq(i));
 		}
 	};
-	ResList.prototype.createResListById = function(){
+	ResCollection.prototype.createResListById = function(){
 		this.resListById = {};
 		for(var i = 0; i < this.resList.length; i++){
 			if(!this.resListById[$(this.resList[i].reshead).attr("data-id")]){
@@ -81,62 +96,53 @@ var net_threeaster_NicoDicBBSViewer = {};
 			this.resListById[$(this.resList[i].reshead).attr("data-id")].push(this.resList[i]);
 		}
 	};
-	ResList.prototype.createResListByNumber = function(){
+	ResCollection.prototype.createResListByNumber = function(){
 		this.resListByNumber = [];
 		for(var i = 0; i < this.resList.length; i++){
 			var res = this.resList[i]
 			this.resListByNumber[res.reshead.attr("data-number")] = res;
 		}
 	}
-
-	//-----BbsInitializer-----
-	/*
-	function BbsInitializer(){}
-	BbsInitializer.prototype.
-	*/
-
-	var removeUselessLines = function(s){
-		if(!s){
-			return;
-		}
-		var lines = s.split("\n");
-		var storage = {};
-		for(var i = 0; i < lines.length;){
-			if(!lines[i] || lines[i] in storage){
-				lines.splice(i, 1);	
-			}else{
-				storage[lines[i]] = 0;
-				i++;
+	ResCollection.prototype.makeTooltips = function(){
+		for(var i = 0; i < this.resList.length; i++){
+			this.resList[i].makeIDDivReflectingSameID(this.resListById);
+			this.resList[i].makeNumberDiv(this.resList);
+			if(GM_getValue("showIDTooltip")){
+				this.resList[i].makeIDTooltip(this.resListById);
+			}
+			if(GM_getValue("showResAnchorTooltip")){
+				this.resList[i].makeNumTooltip(this.resListByNumber);
+			}
+			if(GM_getValue("showResNumberTooltip")){
+				this.resList[i].makeLinkedNumberTooltip();
+			}
+			if(GM_getValue("showResHandleTooltip")){
+				this.resList[i].makeNumberHandleTooltip(this.resListByNumber);
 			}
 		}
-		return lines.join("\n");
 	};
 
-
-	var setContextMenu = function(a){
-		var dl = a ? a : $("#bbsmain");
-		dl.find(".ID, .IDMulti, .IDMany").unbind("click").click(function(e){
-			$(this).parent(".reshead").append($("#contextMenu").css({left : e.pageX, top : e.pageY}).show());
-			e.stopPropagation();
-		});
-		$("html").unbind("click").click(function(){
-			$("#contextMenu").hide();
-		});
+	ResCollection.prototype.showRes = function(){
+		var dl = $("#bbs dl");
+		for(var i = 0; i < this.resList.length; i++){
+			dl.append(this.resList[i].reshead);
+			dl.append(this.resList[i].resbody);
+		}
 	};
+
+	var revivalAllRes = function(){
+		for(var i = 0; i < responds.res.length; i++){
+			if(responds.res[i].reshead.hasClass("deleted")){
+				responds.res[i].reshead.removeClass("deleted").find(".name").html(responds.res[i].trueReshead.attr("data-name"));//ここで.nameと.tripが一緒になる。.tripを個別に処理する場合は修正すること
+				responds.res[i].resbody.html("").append(responds.res[i].trueResbody.clone(true).contents()).removeClass("deleted");
+			}
+		}
+	}
+
+	//-----Res-----
 
 	function Res(reshead, resbody){
 		this.reshead = reshead;
-		/*
-			var a = this.reshead.find("a").eq(0);
-			//a.attr("id", "r" + a.attr("name")).attr("href", "#" + a.attr("id"));
-		if(GM_getValue("loadAll") && document.URL.indexOf("http://dic.nicovideo.jp/b/") !== -1){
-			a.html(a.attr("name"));
-			var t = reshead.html();
-			var before = t.substring(0, t.indexOf("</a>"));
-			var after = t.substring(t.indexOf("</a>")).replace(a.attr("name"), "");
-			reshead.html(before + after);
-		}
-		*/
 		this.resbody = resbody;
 	};
 
@@ -252,6 +258,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 	Res.prototype.makeIDTooltip = function(resListById){
 		var sameIDRes = resListById[this.reshead.attr("data-id")];
 		var divID = this.reshead.find("div[class^='ID']");
+		var that = this;
 		divID.unbind("mouseenter").unbind("mouseleave").hover(function(){
 			var tooltip = $("<div></div>").click(function(e){e.stopPropagation();});
 			for(var i = 0; i < sameIDRes.length; i++){
@@ -260,17 +267,14 @@ var net_threeaster_NicoDicBBSViewer = {};
 			}
 			divID.append(tooltip);
 			divID.focus();
-			controlTooltip(tooltip);
-			tooltip.scroll(tooltip.find(".iframe"), function(e){
-				e.data.each(recover);
-			});
-			tooltip.find(".iframe").each(recover);
+			that.adjustHeightOfTooltip(tooltip);
 		}, function(){
 			divID.find("div").remove();
 		});
 	};
 
 	Res.prototype.makeNumTooltip = function(resListByNumber){
+		var that = this;
 		this.resbody.find("a.dic").filter(function(){return $(this).html().indexOf("&gt;&gt;") !== -1}).each(function(){
 			var self = $(this);
 			var num = self.html().split("&gt;").join("").split("-");
@@ -305,11 +309,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 				}
 				self.append(tooltip);
 				self.focus();
-				controlTooltip(tooltip);
-				tooltip.scroll(tooltip.find(".iframe"), function(e){
-					e.data.each(recover);
-				});
-				tooltip.find(".iframe").each(recover);
+				that.adjustHeightOfTooltip(tooltip);
 			}, function(){
 				$(this).find("div").remove();
 			});
@@ -319,6 +319,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 	Res.prototype.makeLinkedNumberTooltip = function(){
 		var divNumber = this.reshead.find("div[class^='Number']");
 		var linkedResponds = this.linkedResponds;
+		var that = this;
 		divNumber.unbind("mouseenter").unbind("mouseleave").hover(function(){
 			var tooltip = $("<div></div>").click(function(e){e.stopPropagation();});
 			for(var i = 0; i < linkedResponds.length; i++){
@@ -327,11 +328,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 			}
 			divNumber.append(tooltip);
 			divNumber.focus();
-			controlTooltip(tooltip);
-			tooltip.scroll(tooltip.find(".iframe"), function(e){
-				e.data.each(recover);
-			});
-			tooltip.find(".iframe").each(recover);
+			that.adjustHeightOfTooltip(tooltip);
 		}, function(){
 			divNumber.find("div").remove();
 		});
@@ -341,6 +338,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 		var nameSpan = this.reshead.find(".name");
 		var name = nameSpan.html();
 		var transformedName = name.replace(/[０１２３４５６７８９]/g, function(c){return "０１２３４５６７８９".indexOf(c);});
+		var that = this;
 		if(/^[0-9]+$/.test(transformedName)){
 			nameSpan.wrap("<span class='NumberHandle'></span>").parent().unbind("mouseenter").unbind("mouseleave").hover(function(){
 				var self = $(this);
@@ -353,26 +351,14 @@ var net_threeaster_NicoDicBBSViewer = {};
 				tooltip.append(res.resbody.clone().find("a").removeAttr("id").end());
 				self.append(tooltip);
 				self.focus();
-				controlTooltip(tooltip);
-				tooltip.scroll(tooltip.find(".iframe"), function(e){
-					e.data.each(recover);
-				});
-				tooltip.find(".iframe").each(recover);
+				that.adjustHeightOfTooltip(tooltip);
 			}, function(){
 				$(this).find("div").remove();
 			});
 		}
 	}
-	
-	var getResByNumber = function(number){
-		for(var i = 0; i < responds.res.length; i++){
-			if(responds.res[i].reshead.attr("data-number") == number){
-				return responds.res[i];
-			}
-		}
-	};
 
-	var controlTooltip = function(tooltip){
+	Res.prototype.adjustHeightOfTooltip = function(tooltip){
 		var a = $("html").scrollTop() + $("#topline").height();
 		var b = tooltip.offset().top;
 		var c = $(window).height() - $("#topline").height();
@@ -390,63 +376,145 @@ var net_threeaster_NicoDicBBSViewer = {};
 		}
 	};
 
-	var getOtherBBS = function(urls){
-		var index = 0;
-		parent.find("dl").eq(0).append("<p style='text-align:center'>now loading...<br/>全てのレスを読み込んでいます。レス数によっては、あるいはサーバーの調子によっては数分間かかることもあります。</p>");
-		var dl = $("<dl></dl>");
-		function getURL(url){
-			$.get(url, function(r){
-				dl.append($(r).find("#bbs").find("dl").unwrap());
-				index++;
-				if(index < urls.length){
-					getURL(urls[index]);
-				}else{
-					parent.find("dl").eq(0).empty();
-					delayiframe(dl);
-					createRes(dl);
-					createResListById();
-					makeTooltips();
-					showres(responds.res);
-					setContextMenu();
-					bindMenu();
-					for(var i = 0; i < responds.res.length; i++){
-						responds.res[i].backupRes();
-					}
-					applyNG();
-				}
-			});
-		};
-		getURL(urls[0]);
-	};
-
-	var delayiframe = function(dl){
-		dl.find("iframe").wrap("<div class='iframe'>");
-		dl.find(".iframe").each(function(){
-			$(this).html("<!--" + $(this).html() + "-->");
-		});
-		$(window).bind("scroll.iframe", dl.find(".iframe"), function(e){
-			e.data.each(recover);
-		});
+	//-----NgOperator-----
+	function NgOperator(){
+		this.ngList = {};
+		this.ngList.ngid = [];
+		this.ngList.ngname = [];
+		this.ngList.ngword = [];
+		this.ngList.ngres = [];
+		this.urlAnalyzer = new UrlAnalyzer();
 	}
-
-	var makeTooltips = function(){
-		for(var i = 0; i < responds.res.length; i++){
-			responds.res[i].makeIDDivReflectingSameID();
-			responds.res[i].makeNumberDiv();
-			if(GM_getValue("showIDTooltip")){
-				responds.res[i].makeIDTooltip();
+	NgOperator.prototype.initNg = function(){
+		this.ngList = {};
+		this.ngList.ngidText = removeUselessLines(GM_getValue("ngid"));
+		if(this.ngList.ngidText){
+			this.ngList.ngid = this.ngList.ngidText.split("\n");
+			for(var i = 0; i < this.ngList.ngid.length; i++){
+				this.ngList.ngid[i] = $.trim(this.ngList.ngid[i]);
 			}
-			if(GM_getValue("showResAnchorTooltip")){
-				responds.res[i].makeNumTooltip();
+		}else{
+			this.ngList.ngid = [];
+		}
+		this.ngList.ngnameText = removeUselessLines(GM_getValue("ngname"));
+		if(this.ngList.ngnameText){
+			this.ngList.ngname = this.ngList.ngnameText.split("\n");
+			for(var i = 0; i < this.ngList.ngname.length; i++){
+				this.ngList.ngname[i] = $.trim(this.ngList.ngname[i]);
 			}
-			if(GM_getValue("showResNumberTooltip")){
-				responds.res[i].makeLinkedNumberTooltip();
+		}else{
+			this.ngList.ngname = [];
+		}
+		this.ngList.ngwordText = removeUselessLines(GM_getValue("ngword"));
+		if(this.ngList.ngwordText){
+			this.ngList.ngword = this.ngList.ngwordText.split("\n");
+			for(var i = 0; i < this.ngList.ngword.length; i++){
+				this.ngList.ngword[i] = $.trim(this.ngList.ngword[i]);
 			}
-			if(GM_getValue("showResHandleTooltip")){
-				responds.res[i].makeNumberHandleTooltip();
+		}else{
+			this.ngList.ngword = [];
+		}
+		this.ngList.ngresText = removeUselessLines(GM_getValue("ngres"));
+		if(this.ngList.ngresText){
+			this.ngList.ngres = this.ngList.ngresText.split("\n");
+			for(var i = 0; i < this.ngList.ngres.length; i++){
+				this.ngList.ngres[i] = $.trim(this.ngList.ngres[i]);
 			}
+		}else{
+			this.ngList.ngres = [];
 		}
 	};
+
+	NgOperator.prototype.applyNG = function(resList){
+		for(var i = 0; i < resList.length; i++){
+			var r = resList[i];
+			var applied = false;
+			if(GM_getValue("useNG")){
+				var id = r.trueReshead.attr("data-id");
+				var name = r.trueReshead.attr("data-name");
+				for(var j = 0; !applied && j < this.ngList.ngid.length; j++){
+					if(this.ngList.ngid[j] === id){
+						applied = true;
+					}
+				}
+				for(var j = 0; !applied && j < this.ngList.ngname.length; j++){
+					if(name.indexOf(this.ngList.ngname[j]) !== -1){
+						applied = true;
+					}
+				}
+				for(var j = 0; !applied && j < this.ngList.ngword.length; j++){
+					if(r.trueResbody.text().indexOf(this.ngList.ngword[j]) !== -1){
+						applied = true;
+					}
+				}
+				for(var j = 0; !applied && j < this.ngList.ngres.length; j++){
+					var ngres = this.ngList.ngres[j].split(":");
+					var number = ngres.pop();
+					var URL = ngres.join(":");
+					if(this.urlAnalyzer.isPageOf(URL) && r.reshead.attr("data-number") == number){
+						applied = true;
+					}
+				}
+			}
+
+			if(applied){
+				$("#contextMenu").insertAfter("#ng");
+				r.reshead.find(".name").html("削除しました");
+				r.reshead.find(".trip").remove();
+				r.reshead.addClass("deleted");
+				r.resbody.html("削除しました").addClass("deleted");
+			}else if(r.reshead.hasClass("deleted")){
+				r.reshead.removeClass("deleted").find(".name").html(r.trueReshead.attr("data-name"));//ここで.nameと.tripが一緒になる。.tripを個別に処理する場合は修正すること
+				r.resbody.html("").append(r.trueResbody.clone(true).contents()).removeClass("deleted");
+			}
+
+			var css = $("#nicoDicBBSViewerCSS");
+			if(GM_getValue("seethroughNG")){
+				if(css.html().indexOf("deleted") === -1){
+					css.html(css.html() + ".deleted{display:none}");
+				}
+			}else{
+				if(css.html().indexOf("deleted") !== -1){
+					css.html(css.html().replace(".deleted{display:none}", ""));
+				}
+			}
+		}
+		
+		$(window).unbind("scroll.iframe").bind("scroll.iframe", $(".iframe"), function(e){
+			e.data.each(recover);
+		});
+	};
+	//----------
+	
+	var removeUselessLines = function(s){
+		if(!s){
+			return;
+		}
+		var lines = s.split("\n");
+		var storage = {};
+		for(var i = 0; i < lines.length;){
+			if(!lines[i] || lines[i] in storage){
+				lines.splice(i, 1);	
+			}else{
+				storage[lines[i]] = 0;
+				i++;
+			}
+		}
+		return lines.join("\n");
+	};
+
+
+	var setContextMenu = function(a){
+		var dl = a ? a : $("#bbsmain");
+		dl.find(".ID, .IDMulti, .IDMany").unbind("click").click(function(e){
+			$(this).parent(".reshead").append($("#contextMenu").css({left : e.pageX, top : e.pageY}).show());
+			e.stopPropagation();
+		});
+		$("html").unbind("click").click(function(){
+			$("#contextMenu").hide();
+		});
+	};
+
 
 	var bindMenu = function(){
 		$("#ngidMenu").click(function(){
@@ -493,33 +561,6 @@ var net_threeaster_NicoDicBBSViewer = {};
 			initNG();
 			applyNG();
 		});
-	};
-
-	var recover = function(){
-		var self = $(this);
-		var tooltip = self.parents(".ID>div, .IDMulti>div, .IDMany>div, .numTooltip>div, .Number>div, .NumberMulti>div, .NumberMany>div");
-		if(tooltip.size() === 0){
-			var windowhi = $("html").scrollTop();
-			var windowlow = $("html").scrollTop() + $(window).height();
-		}else{
-			var windowhi = tooltip.scrollTop();
-			var windowlow = tooltip.scrollTop() + tooltip.height();
-		}
-		var iframehi = self.position().top;
-		var iframelow = self.position().top + self.height();
-		if(((windowhi < iframehi) && (iframehi < windowlow)) || ((windowhi < iframelow) && (iframelow < windowlow))){
-			self.html(self.html().replace(/<!--|-->/g, ""));
-			self.replaceWith(self.contents());
-		}
-	};
-
-	var showres = function(responds){
-		var dl = parent.find("dl");
-		for(var i = 0; i < responds.length; i++){
-			dl.append(responds[i].reshead);
-			dl.append(responds[i].resbody);
-		}
-		dl.find(".iframe").each(recover);
 	};
 
 	var ajustSideMenu = function(){
@@ -625,113 +666,6 @@ var net_threeaster_NicoDicBBSViewer = {};
 		});
 	};
 
-	var initNG = function(){
-		var nglist = {};
-		nglist.ngidText = removeUselessLines(GM_getValue("ngid"));
-		if(nglist.ngidText){
-			nglist.ngid = nglist.ngidText.split("\n");
-			for(var i = 0; i < nglist.ngid.length; i++){
-				nglist.ngid[i] = $.trim(nglist.ngid[i]);
-			}
-		}else{
-			nglist.ngid = [];
-		}
-		nglist.ngnameText = removeUselessLines(GM_getValue("ngname"));
-		if(nglist.ngnameText){
-			nglist.ngname = nglist.ngnameText.split("\n");
-			for(var i = 0; i < nglist.ngname.length; i++){
-				nglist.ngname[i] = $.trim(nglist.ngname[i]);
-			}
-		}else{
-			nglist.ngname = [];
-		}
-		nglist.ngwordText = removeUselessLines(GM_getValue("ngword"));
-		if(nglist.ngwordText){
-			nglist.ngword = nglist.ngwordText.split("\n");
-			for(var i = 0; i < nglist.ngword.length; i++){
-				nglist.ngword[i] = $.trim(nglist.ngword[i]);
-			}
-		}else{
-			nglist.ngword = [];
-		}
-		nglist.ngresText = removeUselessLines(GM_getValue("ngres"));
-		if(nglist.ngresText){
-			nglist.ngres = nglist.ngresText.split("\n");
-			for(var i = 0; i < nglist.ngres.length; i++){
-				nglist.ngres[i] = $.trim(nglist.ngres[i]);
-			}
-		}else{
-			nglist.ngres = [];
-		}
-		return nglist;
-	};
-
-	var applyNG = function(){
-		for(var i = 0; i < responds.res.length; i++){
-			var r = responds.res[i];
-			var applied = false;
-			if(GM_getValue("useNG")){
-				var id = r.trueReshead.attr("data-id");
-				var name = r.trueReshead.attr("data-name");
-				for(var j = 0; !applied && j < nglist.ngid.length; j++){
-					if(nglist.ngid[j] === id){
-						applied = true;
-					}
-				}
-				for(var j = 0; !applied && j < nglist.ngname.length; j++){
-					if(name.indexOf(nglist.ngname[j]) !== -1){
-						applied = true;
-					}
-				}
-				for(var j = 0; !applied && j < nglist.ngword.length; j++){
-					if(r.trueResbody.text().indexOf(nglist.ngword[j]) !== -1){
-						applied = true;
-					}
-				}
-				for(var j = 0; !applied && j < nglist.ngres.length; j++){
-					var ngres = nglist.ngres[j].split(":");
-					var number = ngres.pop();
-					var URL = ngres.join(":");
-					if(document.URL.indexOf(URL) !== -1 && r.reshead.attr("data-number") == number){
-						applied = true;
-					}
-				}
-			}
-			if(applied){
-				$("#contextMenu").insertAfter("#ng");
-				r.reshead.find(".name").html("削除しました");
-				r.reshead.find(".trip").remove();
-				r.reshead.addClass("deleted");
-				r.resbody.html("削除しました").addClass("deleted");
-			}else if(r.reshead.hasClass("deleted")){
-				r.reshead.removeClass("deleted").find(".name").html(r.trueReshead.attr("data-name"));//ここで.nameと.tripが一緒になる。.tripを個別に処理する場合は修正すること
-				r.resbody.html("").append(r.trueResbody.clone(true).contents()).removeClass("deleted");
-			}
-			var css = $("#nicoDicBBSViewerCSS");
-			if(GM_getValue("seethroughNG")){
-				if(css.html().indexOf("deleted") === -1){
-					css.html(css.html() + ".deleted{display:none}");
-				}
-			}else{
-				if(css.html().indexOf("deleted") !== -1){
-					css.html(css.html().replace(".deleted{display:none}", ""));
-				}
-			}
-		}
-		$(window).unbind("scroll.iframe").bind("scroll.iframe", $(".iframe"), function(e){
-			e.data.each(recover);
-		});
-	};
-
-	var revivalAllRes = function(){
-		for(var i = 0; i < responds.res.length; i++){
-			if(responds.res[i].reshead.hasClass("deleted")){
-				responds.res[i].reshead.removeClass("deleted").find(".name").html(responds.res[i].trueReshead.attr("data-name"));//ここで.nameと.tripが一緒になる。.tripを個別に処理する場合は修正すること
-				responds.res[i].resbody.html("").append(responds.res[i].trueResbody.clone(true).contents()).removeClass("deleted");
-			}
-		}
-	}
-
 	function ManagerToReadBbs(urls){
 		this.bbsUrls = urls;
 		if(document.URL.indexOf("#") === -1){
@@ -765,7 +699,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 	var prependBbs = function(dl){
 		revivalAllRes();
 		parent.find("dl").prepend(dl.contents());
-		createRes(parent.find("dl"));
+		createResList(parent.find("dl"));
 		createResListById();
 		makeTooltips();
 		setContextMenu();
@@ -796,7 +730,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 	var nextBbs = function(dl){
 		revivalAllRes();
 		parent.find("dl").append(dl.contents());
-		createRes(parent.find("dl"));
+		createResList(parent.find("dl"));
 		createResListById();
 		makeTooltips();
 		setContextMenu();
@@ -809,7 +743,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 	};
 
 	var initSmallBbs = function(){
-		createRes(parent.find("dl"));
+		createResList(parent.find("dl"));
 		if(document.URL.indexOf("http://dic.nicovideo.jp/b/") !== -1 || GM_getValue("tooltipOnDicPage")){
 			createResListById();
 			makeTooltips();
@@ -837,7 +771,22 @@ var net_threeaster_NicoDicBBSViewer = {};
 			pager.eq(1).append("<a id='loadNextPageLinks' href='#'>次へ</a>");
 			pager.find("#loadNextPageLinks").click(readNextBbs);
 		}
-	}
+	};
+
+	var scrollLoader = function(){
+		var reserved = false;
+		setInterval(function(){
+			if(reserved){
+				reserved = false;
+				readNextBbs();
+			}
+		}, 1000);
+			$(window).scroll(function(){
+			if($(".selected").attr("id") === "bbsLi" && GM_getValue("autoLoad") && $("html").scrollTop() + $(window).height() > $("#bbsmain").position().top + $("#bbsmain").height()){
+				reserved = true;
+			}
+		});
+	};
 	
 	var initConfig = function(ids){
 		for(var i = 0; i < ids.length; i++){
@@ -878,24 +827,8 @@ var net_threeaster_NicoDicBBSViewer = {};
 		});
 	};
 
-	var scrollLoader = function(){
-		var reserved = false;
-		setInterval(function(){
-			if(reserved){
-				reserved = false;
-				readNextBbs();
-			}
-		}, 1000);
-			$(window).scroll(function(){
-			if($(".selected").attr("id") === "bbsLi" && GM_getValue("autoLoad") && $("html").scrollTop() + $(window).height() > $("#bbsmain").position().top + $("#bbsmain").height()){
-				reserved = true;
-			}
-		});
-	};
-
 //以下main
 	var nglist = {};//ngid,ngname,ngresたちのまとめ。
-	var responds = {};//Resオブジェクトの配列"res"、ResオブジェクトのIDによる連想配列"resListById"が格納。
 	var main = function(){
 		initConfig(["useNG", "autoLoad", "tooltipOnDicPage", "showIDTooltip", "showResAnchorTooltip", "showResNumberTooltip", "showResHandleTooltip", 
 					"classificationID", "classificationResNumber"]);
@@ -904,7 +837,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 		parent.find("dl").attr("id", "bbsmain");
 		var bbsScroll = 0;
 		var pager = parent.find(".pager");
-		nglist = initNG();
+		var nglist = initNG();
 		$(".border").remove();
 		var urlAnalyzer = new UrlAnalyzer();
 		if(urlAnalyzer.inArticlePage()){
@@ -924,20 +857,10 @@ var net_threeaster_NicoDicBBSViewer = {};
 	c.removeUselessLines = removeUselessLines;
 	c.setContextMenu = setContextMenu;
 	c.Res = Res;
-	c.makeIDDiv = makeIDDiv;
-	c.getResByNumber = getResByNumber;
-	c.controlTooltip = controlTooltip;
-	c.getOtherBBS = getOtherBBS;
-	c.delayiframe = delayiframe;
-	c.makeTooltips = makeTooltips;
 	c.bindMenu = bindMenu;
-	c.recover = recover;
-	c.showres = showres;
 	c.ajustSideMenu = ajustSideMenu;
 	c.getCheckbox = getCheckbox;
 	c.setMenu = setMenu;
-	c.initNG = initNG;
-	c.applyNG = applyNG;
 	c.revivalAllRes = revivalAllRes;
 	c.ManagerToReadBbs = ManagerToReadBbs;
 	c.readPreviousBbs = readPreviousBbs;
@@ -950,5 +873,6 @@ var net_threeaster_NicoDicBBSViewer = {};
 	c.nglist = nglist;
 	c.insertStyle = insertStyle;
 	c.UrlAnalyzer = UrlAnalyzer;
-	c.ResList = ResList;
+	c.ResCollection = ResCollection;
+	c.NgOperator = NgOperator;
 })(jQuery);
