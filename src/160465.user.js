@@ -130,14 +130,26 @@ var net_threeaster_NicoDicBBSViewer = {};
 		}
 	};
 
-	var revivalAllRes = function(){
-		for(var i = 0; i < responds.res.length; i++){
-			if(responds.res[i].reshead.hasClass("deleted")){
-				responds.res[i].reshead.removeClass("deleted").find(".name").html(responds.res[i].trueReshead.attr("data-name"));//ここで.nameと.tripが一緒になる。.tripを個別に処理する場合は修正すること
-				responds.res[i].resbody.html("").append(responds.res[i].trueResbody.clone(true).contents()).removeClass("deleted");
+	ResCollection.prototype.revivalAllRes = function(){
+		for(var i = 0; i < this.resList.length; i++){
+			if(this.resList[i].reshead.hasClass("deleted")){
+				this.resList[i].reshead.removeClass("deleted").find(".name").html(this.resList[i].trueReshead.attr("data-name"));//ここで.nameと.tripが一緒になる。.tripを個別に処理する場合は修正すること
+				this.resList[i].resbody.html("").append(this.resList[i].trueResbody.clone(true).contents()).removeClass("deleted");
 			}
 		}
 	}
+
+	ResCollection.prototype.setContextMenu = function(){
+		for(var i = 0; i < this.resList.length; i++){
+			this.resList[i].reshead.find(".ID, .IDMulti, .IDMany").unbind("click").click(function(e){
+				$(this).parent(".reshead").append($("#contextMenu").css({left : e.pageX, top : e.pageY}).show());
+				e.stopPropagation();
+			});
+		}
+		$("html").unbind("click").click(function(){
+			$("#contextMenu").hide();
+		});
+	};
 
 	//-----Res-----
 
@@ -479,10 +491,6 @@ var net_threeaster_NicoDicBBSViewer = {};
 				}
 			}
 		}
-		
-		$(window).unbind("scroll.iframe").bind("scroll.iframe", $(".iframe"), function(e){
-			e.data.each(recover);
-		});
 	};
 	//----------
 	
@@ -501,18 +509,6 @@ var net_threeaster_NicoDicBBSViewer = {};
 			}
 		}
 		return lines.join("\n");
-	};
-
-
-	var setContextMenu = function(a){
-		var dl = a ? a : $("#bbsmain");
-		dl.find(".ID, .IDMulti, .IDMany").unbind("click").click(function(e){
-			$(this).parent(".reshead").append($("#contextMenu").css({left : e.pageX, top : e.pageY}).show());
-			e.stopPropagation();
-		});
-		$("html").unbind("click").click(function(){
-			$("#contextMenu").hide();
-		});
 	};
 
 
@@ -666,18 +662,23 @@ var net_threeaster_NicoDicBBSViewer = {};
 		});
 	};
 
-	function ManagerToReadBbs(urls){
+	function ManagerToReadBbs(urls, ana){
+		if(ana === undefined){
+			ana = new UrlAnalyzer();
+		}
 		this.bbsUrls = urls;
-		if(document.URL.indexOf("#") === -1){
-			this.startIndex = urls.indexOf(document.URL);
+		var nowUrl = ana.getNowUrl();
+		if(nowUrl.indexOf("#") === -1){
+			this.startIndex = urls.indexOf(nowUrl);
 		}else{
-			var mainurl = document.URL.substring(0, document.URL.indexOf("#"));
+			var mainurl = nowUrl.substring(0, nowUrl.indexOf("#"));
 			if(mainurl.indexOf("-") === -1){
 				mainurl = mainurl + "-";
 			}
 			this.startIndex = urls.indexOf(mainurl);
 		}
 		this.endIndex = this.startIndex;
+		this.isNowLoading = false;
 	};
 
 	var readPreviousBbs = function(){
@@ -855,13 +856,11 @@ var net_threeaster_NicoDicBBSViewer = {};
 	//-----test用-----
 	var c = net_threeaster_NicoDicBBSViewer;
 	c.removeUselessLines = removeUselessLines;
-	c.setContextMenu = setContextMenu;
 	c.Res = Res;
 	c.bindMenu = bindMenu;
 	c.ajustSideMenu = ajustSideMenu;
 	c.getCheckbox = getCheckbox;
 	c.setMenu = setMenu;
-	c.revivalAllRes = revivalAllRes;
 	c.ManagerToReadBbs = ManagerToReadBbs;
 	c.readPreviousBbs = readPreviousBbs;
 	c.prependBbs = prependBbs;

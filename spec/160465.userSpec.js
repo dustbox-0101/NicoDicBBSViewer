@@ -481,7 +481,7 @@ describe("", function(){
 				var reshead = [];
 				var resbody = [];
 				reshead[0] = '<dt class="reshead"><a name="5" class="resnumhead"></a>5 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
-				resbody[0] = '<dd class="resbody"><a href="/b/a/name/1-#2" rel="nofollow" target="_blank" class="dic">&gt;&gt;7</a></dd>';
+				resbody[0] = '<dd class="resbody"><a href="/b/a/name/1-#7" rel="nofollow" target="_blank" class="dic">&gt;&gt;7</a></dd>';
 				reshead[1] = '<dt class="reshead"><a name="6" class="resnumhead"></a>6 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
 				resbody[1] = '<dd class="resbody"><a href="/b/a/name/1-#2" rel="nofollow" target="_blank" class="dic">&gt;&gt;2</a></dd>';
 	   			var html = constructDl(reshead, resbody);
@@ -494,6 +494,125 @@ describe("", function(){
 	   			expect($("#bbs dl .reshead").eq(1).attr("data-number")).toEqual("6");
 	   			//tearDown
 	   			$("#bbs").remove();
+			});
+		});
+
+		describe("revivalAllResのテスト", function(){
+			var sut;
+			var reshead;
+			var resbody;
+			beforeEach(function(){
+				reshead = [];
+				resbody = [];
+				reshead[0] = '<dt class="reshead"><a name="5" class="resnumhead"></a>5 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+				resbody[0] = '<dd class="resbody">テスト<a href="/b/a/name/1-#7" rel="nofollow" target="_blank" class="dic">&gt;&gt;7</a></dd>';
+				var html = constructDl(reshead, resbody);
+				sut = new c.ResCollection();
+				sut.createResList($(html));
+				sut.resList[0].backupRes();
+				var style = "<style id='nicoDicBBSViewerCSS' type='text/css'></style>";
+				$("link").last().after(style);
+			});
+
+			afterEach(function(){
+				$("#nicoDicBBSViewerCSS").remove();
+			});
+
+			it("NG処理をしたresをrevivalAllResはNGが処理される前に戻す", function(){
+				//setUp
+				GM_setValue("useNG", true);
+				var ng = new c.NgOperator();
+				ng.ngList.ngid = ["b6fD7NC5x/"];
+				ng.applyNG(sut.resList);
+				//exercise
+				sut.revivalAllRes();
+				//verify
+				var res = sut.resList[0];
+				expect(res.reshead.hasClass("deleted")).toEqual(false);
+				expect(res.resbody.hasClass("deleted")).toEqual(false);
+				expect(res.resbody.html()).toEqual($(resbody[0]).html());
+			});
+
+			it("NG処理がされていないときrevivalAllResは何もしない", function(){
+				//exercise
+				sut.revivalAllRes();
+				//verify
+				var res = sut.resList[0];
+				expect(res.reshead.html()).toEqual($(reshead[0]).html());
+				expect(res.resbody.html()).toEqual($(resbody[0]).html());
+			});
+		});
+
+		describe("setContextMenuのテスト", function(){
+			var sut;
+			var reshead;
+			var resbody;
+			beforeEach(function(){
+				reshead = [];
+				resbody = [];
+				reshead[0] = '<dt class="reshead"><a name="5" class="resnumhead"></a>5 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+				resbody[0] = '<dd class="resbody">テスト<a href="/b/a/name/1-#7" rel="nofollow" target="_blank" class="dic">&gt;&gt;7</a></dd>';
+				reshead[1] = '<dt class="reshead"><a name="6" class="resnumhead"></a>6 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+				resbody[1] = '<dd class="resbody">テスト<a href="/b/a/name/1-#7" rel="nofollow" target="_blank" class="dic">&gt;&gt;7</a></dd>';
+				var html = constructDl(reshead, resbody);
+				sut = new c.ResCollection();
+				sut.createResList($(html));
+				sut.createResListById();
+				sut.resList[0].makeIDDivReflectingSameID(sut.resListById);
+				sut.resList[1].makeIDDivReflectingSameID(sut.resListById);
+				var contextMenu = "<ul id='contextMenu' style='display:none;'><li>テスト</li></ul>";
+				$("body").append(contextMenu);
+				sut.setContextMenu();
+				$("body").append("<div id='sandbox'></div>")
+				for(var i = 0; i < sut.resList.length; i++){
+					$("#sandbox").append(sut.resList[i].reshead);
+					$("#sandbox").append(sut.resList[i].resbody);
+				}
+			});
+
+			afterEach(function(){
+				$("#contextMenu").remove();
+				$("#sandbox").remove();
+			});
+
+			it("setContextMenuにより、.IDなどをクリックすると、contextMenuが出る", function(){
+				//setUP
+				var e = new $.Event("click");
+				e.pageX = 50;
+				e.pageY = 100;
+				//exercise
+				sut.resList[0].reshead.find(".ID").trigger(e);
+				//vefiry
+				var con = sut.resList[0].reshead.find("#contextMenu");
+				expect(con.css("display")).not.toEqual("none");
+				expect(con.css("left")).toEqual("50px");
+				expect(con.css("top")).toEqual("100px");
+			});
+
+			it("setContextMenuによるcontextMenuは、.ID以外のところをクリックすると消える", function(){
+				//setUp
+				sut.resList[0].reshead.find(".ID").trigger("click");
+				//exercise
+				$("body").trigger("click");
+				//vefiry
+				var con = sut.resList[0].reshead.find("#contextMenu");
+				expect(con.css("display")).toEqual("none");
+			});
+
+			it("IDをクリックした後、別のIDをクリックすると後にクリックしたものだけが残る", function(){
+				//setUp
+				sut.resList[0].reshead.find(".ID").trigger("click");
+				var e = new $.Event("click");
+				e.pageX = 50;
+				e.pageY = 100;
+				//exercise
+				sut.resList[1].reshead.find(".ID").trigger(e);
+				//vefiry
+				expect(sut.resList[0].reshead.find("#contextMenu").size()).toEqual(0);
+				var con = sut.resList[1].reshead.find("#contextMenu");
+				expect(con.css("display")).not.toEqual("none");
+				expect(con.css("left")).toEqual("50px");
+				expect(con.css("top")).toEqual("100px");
 			});
 		});
 	});
@@ -1128,6 +1247,36 @@ describe("", function(){
 				});
 			});
 		});
+	});
+
+	describe("ManagerToReadBbsのテスト", function(){
+		var sut;
+		var urls;
+		var basicUrl
+		var urlAnalyzer;
+		beforeEach(function(){
+			urlAnalyzer = new c.UrlAnalyzer();
+			basicUrl = "http://www.nicovideo.jp/b/a/read/";
+			spyOn(urlAnalyzer, "getNowUrl").and.returnValue(basicUrl + "31-");
+			urls = [];
+			for(var i = 0; i < 4; i++){
+				urls[i] = basicUrl + (30 * i + 1) + "-";
+			}
+		});
+
+		it("コンストラクタでbbsUrls、startIndex、endIndex、isNowLoadingが定義される", function(){
+			//exercise
+			sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+			//verify
+			for(var i = 0; i < urls.length; i++){
+				expect(sut.bbsUrls[i]).toEqual(urls[i]);
+			}
+			expect(sut.startIndex).toEqual(1);
+			expect(sut.endIndex).toEqual(1);
+			expect(sut.isNowLoading).toEqual(false);
+		});
+
+
 	});
 });
 
