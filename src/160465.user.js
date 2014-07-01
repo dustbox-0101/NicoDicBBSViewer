@@ -25,6 +25,9 @@ var net_threeaster_NicoDicBBSViewer = {};
 		return this.getNowUrl().indexOf("http://dic.nicovideo.jp/b/") === -1;
 	};
 	UrlAnalyzer.prototype.getBBSURLs = function(pager){
+		if(pager.size() === 0){
+			return [];
+		}
 		var urls = pager.find("a").not(".navi").map(function(){return this.href}).get();
 		var bbsURLs = [];
 		if(urls.length){
@@ -172,16 +175,17 @@ var net_threeaster_NicoDicBBSViewer = {};
 		});
 	};
 
-	Res.prototype.makeIDDivReflectingSameID = function(resListById){
+	Res.prototype.makeIDDivReflectingSameID = function(resListById, classificationFlag){
+		var reflectSameId = GM_getValue("classificationID") && classificationFlag !== false;
 		var addOrdinalAndTotal = function(res, sameIDRes){
-			if(GM_getValue("classificationID")){
+			if(reflectSameId){
 				return "[" + (sameIDRes.indexOf(res) + 1) + "/" + sameIDRes.length + "]"
 			}else{
 				return "";
 			}
 		}
 		var sameIDRes = resListById[this.reshead.attr("data-id")];
-		if(GM_getValue("classificationID")){
+		if(reflectSameId){
 			var addIDMulti = "IDMulti";
 			var addIDMany = "IDMany";
 		}else{
@@ -568,7 +572,6 @@ var net_threeaster_NicoDicBBSViewer = {};
 	};
 	
 	var getCheckbox = function(id){
-		console.log(id);
 		return '<input id="' + id + 'Checkbox" type="checkbox" ' + (GM_getValue(id) ? "checked = 'checked'" : "") + '/>';
 	}
 
@@ -666,6 +669,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 		if(ana === undefined){
 			ana = new UrlAnalyzer();
 		}
+		this.urlAnalyzer = ana;
 		this.bbsUrls = urls;
 		var nowUrl = ana.getNowUrl();
 		if(nowUrl.indexOf("#") === -1){
@@ -681,7 +685,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 		this.isNowLoading = false;
 	};
 
-	var readPreviousBbs = function(){
+	ManagerToReadBbs.prototype.readPreviousBbs = function(){
 		if(manager.isNowLoading || manager.startIndex <= 0){
 			return;
 		}
@@ -712,7 +716,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 		manager.isNowLoading = false;
 	};
 
-	var readNextBbs = function(){
+	ManagerToReadBbs.prototype.readNextBbs = function(){
 		if(manager.isNowLoading || manager.endIndex >= manager.bbsUrls.length - 1){
 			return;
 		}
@@ -761,16 +765,21 @@ var net_threeaster_NicoDicBBSViewer = {};
 		applyNG();
 	};
 
-	var initPagerForThirtyBbs = function(){
-		pager.eq(0).find("a:not(:first), .current, span").remove();
-		if(manager.startIndex > 0){
-			pager.eq(0).append("<a id='loadPreviousPageLinks' href='#'>前へ</a>");
-			pager.find("#loadPreviousPageLinks").click(readPreviousBbs);
-		}
-		pager.eq(1).find("a:not(:first), .current, span").remove();
-		if(manager.endIndex < manager.bbsUrls.length - 1){
-			pager.eq(1).append("<a id='loadNextPageLinks' href='#'>次へ</a>");
-			pager.find("#loadNextPageLinks").click(readNextBbs);
+	ManagerToReadBbs.prototype.initPager = function(){
+		var pager = $("#bbs .pager");
+		if(this.urlAnalyzer.inArticlePage()){
+			pager.find(".navi").remove();
+		}else{
+			pager.eq(0).find("a:not(:first), .current, span").remove();
+			if(this.startIndex > 0){
+				pager.eq(0).append("<a id='loadPreviousPageLinks' href='#'>前へ</a>");
+				pager.find("#loadPreviousPageLinks").click(this.readPreviousBbs);
+			}
+			pager.eq(1).find("a:not(:first), .current, span").remove();
+			if(this.endIndex < this.bbsUrls.length - 1){
+				pager.eq(1).append("<a id='loadNextPageLinks' href='#'>次へ</a>");
+				pager.find("#loadNextPageLinks").click(this.readNextBbs);
+			}
 		}
 	};
 
@@ -829,7 +838,6 @@ var net_threeaster_NicoDicBBSViewer = {};
 	};
 
 //以下main
-	var nglist = {};//ngid,ngname,ngresたちのまとめ。
 	var main = function(){
 		initConfig(["useNG", "autoLoad", "tooltipOnDicPage", "showIDTooltip", "showResAnchorTooltip", "showResNumberTooltip", "showResHandleTooltip", 
 					"classificationID", "classificationResNumber"]);
@@ -842,12 +850,12 @@ var net_threeaster_NicoDicBBSViewer = {};
 		$(".border").remove();
 		var urlAnalyzer = new UrlAnalyzer();
 		if(urlAnalyzer.inArticlePage()){
-			pager.find(".navi").remove();
+			initPager();
 			initSmallBbs();
 		}else{
 			var manager = new ManagerToReadBbs(urlAnalyzer.getBBSURLs(pager.eq(0)));
 			counterAutopagerize();
-			initPagerForThirtyBbs();
+			initPager();
 			initSmallBbs();
 			scrollLoader();
 		}
@@ -862,14 +870,10 @@ var net_threeaster_NicoDicBBSViewer = {};
 	c.getCheckbox = getCheckbox;
 	c.setMenu = setMenu;
 	c.ManagerToReadBbs = ManagerToReadBbs;
-	c.readPreviousBbs = readPreviousBbs;
 	c.prependBbs = prependBbs;
-	c.readNextBbs = readNextBbs;
 	c.nextBbs = nextBbs;
 	c.initSmallBbs = initSmallBbs;
-	c.initPagerForThirtyBbs = initPagerForThirtyBbs;
 	c.initConfig = initConfig;
-	c.nglist = nglist;
 	c.insertStyle = insertStyle;
 	c.UrlAnalyzer = UrlAnalyzer;
 	c.ResCollection = ResCollection;
