@@ -18,12 +18,15 @@ var net_threeaster_NicoDicBBSViewer = {};
 (function($){
 	//-----UrlAnalyzer-----
 	function UrlAnalyzer(){};
+
 	UrlAnalyzer.prototype.getNowUrl = function(){
 		return document.URL;
 	};
+
 	UrlAnalyzer.prototype.inArticlePage = function(){
 		return this.getNowUrl().indexOf("http://dic.nicovideo.jp/b/") === -1;
 	};
+
 	UrlAnalyzer.prototype.getBBSURLs = function(pager){
 		if(pager.size() === 0){
 			return [];
@@ -55,24 +58,33 @@ var net_threeaster_NicoDicBBSViewer = {};
 		}
 		return bbsURLs;
 	};
+
 	UrlAnalyzer.prototype.isPageOf = function(url){
-		var extract = function(url){
-			if(url.indexOf("a/") !== -1){
-				url = url.split("a/")[1];
-			}
-			url = url.split("/")[0];
-			url = url.split(":")[0];
-			url = url.split("#")[0];
-			return url;
-		};
 		var nowUrl = this.getNowUrl();
-		url = extract(url);
-		nowUrl = extract(nowUrl);
+		url = this.getPageName(url);
+		nowUrl = this.getPageName(nowUrl);
 		return url === nowUrl;
 	};
 
+	UrlAnalyzer.prototype.getPageName = function(url){
+		if(url.indexOf("a/") !== -1){
+			url = url.split("a/")[1];
+		}
+		url = url.split("/")[0];
+		url = url.split(":")[0];
+		url = url.split("#")[0];
+		return url;
+	}
+
+	UrlAnalyzer.prototype.getNowPageName = function(){
+		return this.getPageName(this.getNowUrl());
+	}
+
 	//-----ResCollection-----
-	function ResCollection(){}
+	function ResCollection(){
+		this.urlAnalyzer = new UrlAnalyzer();
+	}
+
 	ResCollection.prototype.createResList =  function(dl){
 		dl.find("dt").each(function(){
 			var self = $(this);
@@ -90,6 +102,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 			this.resList[i] = new Res(resheads.eq(i), resbodies.eq(i));
 		}
 	};
+
 	ResCollection.prototype.createResListById = function(){
 		this.resListById = {};
 		for(var i = 0; i < this.resList.length; i++){
@@ -99,17 +112,23 @@ var net_threeaster_NicoDicBBSViewer = {};
 			this.resListById[$(this.resList[i].reshead).attr("data-id")].push(this.resList[i]);
 		}
 	};
+
 	ResCollection.prototype.createResListByNumber = function(){
 		this.resListByNumber = [];
 		for(var i = 0; i < this.resList.length; i++){
 			var res = this.resList[i]
 			this.resListByNumber[res.reshead.attr("data-number")] = res;
 		}
-	}
+	};
+
 	ResCollection.prototype.makeTooltips = function(){
+		var cannotMakeTooltip = !GM_getValue("tooltipOnDicPage") && this.urlAnalyzer.inArticlePage();
 		for(var i = 0; i < this.resList.length; i++){
-			this.resList[i].makeIDDivReflectingSameID(this.resListById);
+			this.resList[i].makeIDDiv(this.resListById, !cannotMakeTooltip);
 			this.resList[i].makeNumberDiv(this.resList);
+			if(cannotMakeTooltip){
+				continue;
+			}
 			if(GM_getValue("showIDTooltip")){
 				this.resList[i].makeIDTooltip(this.resListById);
 			}
@@ -140,7 +159,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 				this.resList[i].resbody.html("").append(this.resList[i].trueResbody.clone(true).contents()).removeClass("deleted");
 			}
 		}
-	}
+	};
 
 	ResCollection.prototype.setContextMenu = function(){
 		for(var i = 0; i < this.resList.length; i++){
@@ -159,6 +178,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 	function Res(reshead, resbody){
 		this.reshead = reshead;
 		this.resbody = resbody;
+		this.urlAnalyzer = new UrlAnalyzer();
 	};
 
 	Res.prototype.backupRes = function(){
@@ -166,17 +186,8 @@ var net_threeaster_NicoDicBBSViewer = {};
 		this.trueResbody = this.resbody.clone(true);
 	}
 
-	var makeIDDiv = function(a){
-		var dl = a ? a : $("#bbsmain");
-		dl.find(".reshead").each(function(){
-			var s = $(this).html().split(":");
-			s[s.length - 2] = s[s.length - 2].replace("ID", "<div class='ID'>ID</div>");
-			$(this).html(s.join(":"));
-		});
-	};
-
-	Res.prototype.makeIDDivReflectingSameID = function(resListById, classificationFlag){
-		var reflectSameId = GM_getValue("classificationID") && classificationFlag !== false;
+	Res.prototype.makeIDDiv = function(resListById){
+		var reflectSameId = GM_getValue("classificationID") && (GM_getValue("tooltipOnDicPage") || !this.urlAnalyzer.inArticlePage());
 		var addOrdinalAndTotal = function(res, sameIDRes){
 			if(reflectSameId){
 				return "[" + (sameIDRes.indexOf(res) + 1) + "/" + sameIDRes.length + "]"
@@ -441,7 +452,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 		}
 	};
 
-	NgOperator.prototype.applyNG = function(resList){
+	NgOperator.prototype.applyNg = function(resList){
 		for(var i = 0; i < resList.length; i++){
 			var r = resList[i];
 			var applied = false;
@@ -496,70 +507,61 @@ var net_threeaster_NicoDicBBSViewer = {};
 			}
 		}
 	};
-	//----------
-	
-	var removeUselessLines = function(s){
-		if(!s){
-			return;
-		}
-		var lines = s.split("\n");
-		var storage = {};
-		for(var i = 0; i < lines.length;){
-			if(!lines[i] || lines[i] in storage){
-				lines.splice(i, 1);	
-			}else{
-				storage[lines[i]] = 0;
-				i++;
-			}
-		}
-		return lines.join("\n");
+	//-----MenuOperator-----
+
+	function MenuOperator(resCollection, ngOperator){
+		this.resCollection = resCollection;
+		this.ngOperator = ngOperator;
+		this.urlAnalyzer = new UrlAnalyzer();
 	};
 
 
-	var bindMenu = function(){
+	MenuOperator.prototype.bindContextMenu = function(){
+		var self = this;
 		$("#ngidMenu").click(function(){
 			$("#contextMenu").hide();
-			if($(this).parents(".reshead").hasClass(".deleted")){
+			if($(this).parents(".reshead").hasClass("deleted")){
 				return false;
 			}
 			var id = $(this).parents(".reshead").attr("data-id");
-			var ngidText = GM_getValue("ngid") + "\n" + id;
+			var gm_ngid = GM_getValue("ngid") ? GM_getValue("ngid") : "";
+			var ngidText = gm_ngid + "\n" + id;
 			ngidText = removeUselessLines(ngidText);
 			$("#ngidTextarea").val(ngidText);
 			GM_setValue("ngid", ngidText);
-			initNG();
-			applyNG();
+			self.ngOperator.initNg();
+			self.ngOperator.applyNg(self.resCollection.resList);
 		});
 
 		$("#ngnameMenu").click(function(){
 			$("#contextMenu").hide();
-			if($(this).parents(".reshead").hasClass(".deleted")){
+			if($(this).parents(".reshead").hasClass("deleted")){
 				return false;
 			}
 			var name = $(this).parents(".reshead").attr("data-name");
-			var ngnameText = GM_getValue("ngname") + "\n" + name;
+			var gm_ngname = GM_getValue("ngname") ? GM_getValue("ngname") : "";
+			var ngnameText = gm_ngname + "\n" + name;
 			ngnameText = removeUselessLines(ngnameText);
 			$("#ngnameTextarea").val(ngnameText);
 			GM_setValue("ngname", ngnameText);
-			initNG();
-			applyNG();
+			self.ngOperator.initNg();
+			self.ngOperator.applyNg(self.resCollection.resList);
 		});
 
 		$("#ngresMenu").click(function(){
 			$("#contextMenu").hide();
-			if($(this).parents(".reshead").hasClass(".deleted")){
+			if($(this).parents(".reshead").hasClass("deleted")){
 				return false;
 			}
 			var number = $(this).parents(".reshead").attr("data-number");
-			var URL = document.URL.split("/");
-			URL.pop();
-			URL = URL.join("/");
-			var ngresText = GM_getValue("ngres") + "\n" + URL + ":" + number;
+			var gm_ngresText = GM_getValue("ngres") ? GM_getValue("ngres") : "";
+			var pageName = self.urlAnalyzer.getNowPageName();
+			var ngresText = gm_ngresText + "\n" + pageName + ":" + number;
 			ngresText = removeUselessLines(ngresText);
 			$("#ngresTextarea").val(ngresText);
 			GM_setValue("ngres", ngresText);
-			initNG();
-			applyNG();
+			self.ngOperator.initNg();
+			self.ngOperator.applyNg(self.resCollection.resList);
 		});
 	};
 
@@ -641,8 +643,8 @@ var net_threeaster_NicoDicBBSViewer = {};
 			setcbConfig("classificationID");
 			setcbConfig("classificationResNumber");
 			setcbConfig("switcherInTopMenu");
-			initNG();
-			applyNG();
+			initNg();
+			applyNg();
 		});
 		
 		$("#cancelNG").click(function(){
@@ -664,6 +666,8 @@ var net_threeaster_NicoDicBBSViewer = {};
 			checkcbConfig("switcherInTopMenu");
 		});
 	};
+
+	//-----ManegerToReadBbs-----
 
 	function ManagerToReadBbs(urls, ana){
 		if(ana === undefined){
@@ -711,7 +715,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 		for(var i = 0; i < responds.res.length; i++){
 			responds.res[i].backupRes();
 		}
-		applyNG();
+		applyNg();
 		$("#loading").remove();
 		manager.isNowLoading = false;
 	};
@@ -742,7 +746,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 		for(var i = 0; i < responds.res.length; i++){
 			responds.res[i].backupRes();
 		}
-		applyNG();
+		applyNg();
 		$("#loading").remove();
 		manager.isNowLoading = false;
 	};
@@ -753,16 +757,16 @@ var net_threeaster_NicoDicBBSViewer = {};
 			createResListById();
 			makeTooltips();
 		}else{
-			makeIDDiv();
+			//makeIDDiv();
 		}
 		for(var i = 0; i < responds.res.length; i++){
 			responds.res[i].backupRes();
 		}
 		setMenu();
 		setContextMenu();
-		bindMenu();
-		initNG();
-		applyNG();
+		bindContextMenu();
+		initNg();
+		applyNg();
 	};
 
 	ManagerToReadBbs.prototype.initPager = function(){
@@ -796,6 +800,24 @@ var net_threeaster_NicoDicBBSViewer = {};
 				reserved = true;
 			}
 		});
+	};
+
+
+	var removeUselessLines = function(s){
+		if(!s){
+			return;
+		}
+		var lines = s.split("\n");
+		var storage = {};
+		for(var i = 0; i < lines.length;){
+			if(!lines[i] || lines[i] in storage){
+				lines.splice(i, 1);	
+			}else{
+				storage[lines[i]] = 0;
+				i++;
+			}
+		}
+		return lines.join("\n");
 	};
 	
 	var initConfig = function(ids){
@@ -846,7 +868,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 		parent.find("dl").attr("id", "bbsmain");
 		var bbsScroll = 0;
 		var pager = parent.find(".pager");
-		var nglist = initNG();
+		var nglist = initNg();
 		$(".border").remove();
 		var urlAnalyzer = new UrlAnalyzer();
 		if(urlAnalyzer.inArticlePage()){
@@ -865,7 +887,6 @@ var net_threeaster_NicoDicBBSViewer = {};
 	var c = net_threeaster_NicoDicBBSViewer;
 	c.removeUselessLines = removeUselessLines;
 	c.Res = Res;
-	c.bindMenu = bindMenu;
 	c.ajustSideMenu = ajustSideMenu;
 	c.getCheckbox = getCheckbox;
 	c.setMenu = setMenu;
@@ -878,4 +899,5 @@ var net_threeaster_NicoDicBBSViewer = {};
 	c.UrlAnalyzer = UrlAnalyzer;
 	c.ResCollection = ResCollection;
 	c.NgOperator = NgOperator;
+	c.MenuOperator = MenuOperator;
 })(jQuery);

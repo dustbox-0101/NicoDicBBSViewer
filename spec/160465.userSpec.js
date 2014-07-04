@@ -192,7 +192,6 @@ describe("", function(){
 				it("レス数が0の時、空の配列が帰ってくる", function(){
 					//exercise
 					var actual = sut.getBBSURLs($("<html></html>").find(".pager"));
-					console.log($("<html></html>").find(".pager").size());
 					//verify
 					expect(actual.length).toEqual(0);
 				});
@@ -338,6 +337,49 @@ describe("", function(){
 				expect(actual).toEqual(true);
 			});
 		});
+
+		describe("getNowPageNameのテスト", function(){
+			var sut;
+			beforeEach(function(){
+				sut = new c.UrlAnalyzer();
+			});
+
+			it("現在記事ページにいる時、記事名を返す", function(){
+				//setUP
+				spyOn(sut, "getNowUrl").and.returnValue("http://dic.nicovideo.jp/a/res");
+				//exercise
+				var actual = sut.getNowPageName();
+				//verify
+				expect(actual).toEqual("res");
+			});
+
+			it("現在記事ページにいて、urlに#が付いている時も記事名を返す", function(){
+				//setUP
+				spyOn(sut, "getNowUrl").and.returnValue("http://dic.nicovideo.jp/a/res#id");
+				//exercise
+				var actual = sut.getNowPageName();
+				//verify
+				expect(actual).toEqual("res");
+			});
+
+			it("現在掲示板ページにいる時、記事名を返す", function(){
+				//setUP
+				spyOn(sut, "getNowUrl").and.returnValue("http://dic.nicovideo.jp/b/a/res/1021-");
+				//exercise
+				var actual = sut.getNowPageName();
+				//verify
+				expect(actual).toEqual("res");
+			});
+
+			it("現在掲示板ページにいて、urlに#が付いている時も記事名を返す", function(){
+				//setUP
+				spyOn(sut, "getNowUrl").and.returnValue("http://dic.nicovideo.jp/b/a/res/1021-#1024");
+				//exercise
+				var actual = sut.getNowPageName();
+				//verify
+				expect(actual).toEqual("res");
+			});
+		});
 	});
 
 	describe("ResCollectionのテスト", function(){
@@ -442,6 +484,7 @@ describe("", function(){
 
 			it("全てのフラグがオンのとき、全てのツールチップが作られる", function(){
 				//setUp
+				GM_setValue("tooltipOnDicPage", true);
 				GM_setValue("showIDTooltip", true);
 				GM_setValue("showResAnchorTooltip", true);
 				GM_setValue("showResNumberTooltip", true);
@@ -464,6 +507,31 @@ describe("", function(){
 			});
 
 			it("全てのフラグがオフのとき、なにもツールチップは作られない", function(){
+				//exercise
+				GM_setValue("tooltipOnDicPage", true);
+				list.makeTooltips(list);
+				//verify
+				res[0].reshead.find("div[class^='ID']").trigger("mouseenter");
+				expect(res[0].reshead.find("div[class^='ID'] > div .reshead").size()).toEqual(0);
+				res[0].reshead.find("div[class^='ID']").trigger("mouseleave");
+				res[0].resbody.find("a.dic").trigger("mouseenter");
+				expect(res[0].resbody.find("span.numTooltip > div .reshead").size()).toEqual(0);
+				res[0].resbody.find("a.dic").trigger("mouseleave");
+				res[0].reshead.find("div[class^='Number']").trigger("mouseenter");
+				expect(res[0].reshead.find("div[class^='Number'] div:not([class^='Number']) .reshead").size()).toEqual(0);
+				res[0].reshead.find("div[class^='Number']").trigger("mouseleave");
+				res[0].reshead.find("span.NumberHandle").trigger("mouseenter");
+				expect(res[0].reshead.find("span.NumberHandle > div .reshead").size()).toEqual(0);
+				res[0].reshead.find("span.NumberHandle").trigger("mouseleave");
+			});
+
+			it("tooltipOnDicPageがオフの時、記事ページではフラグがオンになっていてもツールチップは作られない", function(){
+				//setUP
+				GM_setValue("showIDTooltip", true);
+				GM_setValue("showResAnchorTooltip", true);
+				GM_setValue("showResNumberTooltip", true);
+				GM_setValue("showResHandleTooltip", true);
+				spyOn(list.urlAnalyzer, "inArticlePage").and.returnValue(true);
 				//exercise
 				list.makeTooltips(list);
 				//verify
@@ -531,7 +599,7 @@ describe("", function(){
 				GM_setValue("useNG", true);
 				var ng = new c.NgOperator();
 				ng.ngList.ngid = ["b6fD7NC5x/"];
-				ng.applyNG(sut.resList);
+				ng.applyNg(sut.resList);
 				//exercise
 				sut.revivalAllRes();
 				//verify
@@ -566,8 +634,8 @@ describe("", function(){
 				sut = new c.ResCollection();
 				sut.createResList($(html));
 				sut.createResListById();
-				sut.resList[0].makeIDDivReflectingSameID(sut.resListById);
-				sut.resList[1].makeIDDivReflectingSameID(sut.resListById);
+				sut.resList[0].makeIDDiv(sut.resListById);
+				sut.resList[1].makeIDDiv(sut.resListById);
 				var contextMenu = "<ul id='contextMenu' style='display:none;'><li>テスト</li></ul>";
 				$("body").append(contextMenu);
 				sut.setContextMenu();
@@ -682,17 +750,18 @@ describe("", function(){
 	   			res4 = list.resList[9];
 	   			res5 = list.resList[10];
 	   			res6 = list.resList[12];
+	   			GM_setValue("tooltipOnDicPage", true)
 			});
 
-			describe("makeIDDivRefrectingSameIDのテスト", function(){
+			describe("makeIDDivのテスト", function(){
 
-				it("classificationIDフラグが立っている時、createRes,createResListByIdの後にmakeIDDivRefrectingSameIDをすると、同一IDの数と何番目か、また色分けがされる", function(){
+				it("classificationIDフラグが立っている時、createRes,createResListByIdの後にmakeIDDivをすると、同一IDの数と何番目か、また色分けがされる", function(){
 					//serUp
 		   			GM_setValue("classificationID", true);
 		  			//exercise
-		  			res1.makeIDDivReflectingSameID(list.resListById);
-		  			res2.makeIDDivReflectingSameID(list.resListById);
-		  			res3.makeIDDivReflectingSameID(list.resListById);
+		  			res1.makeIDDiv(list.resListById);
+		  			res2.makeIDDiv(list.resListById);
+		  			res3.makeIDDiv(list.resListById);
 		  			//verify
 		  			expect(res1.reshead.html()).not.toMatch(/\[/);
 		  			expect(res2.reshead.html()).toMatch(/\[1\/3\]/);
@@ -702,11 +771,11 @@ describe("", function(){
 		  			expect(res3.reshead.find("div").hasClass("IDMany")).toEqual(true);
 				});
 
-				it("classificationIDフラグが立っていない時、createRes,createResListByIdの後にmakeIDDivRefrectingSameIDをすると、IDの数は付加されず、class:IDが付加される", function(){
+				it("classificationIDフラグが立っていない時、createRes,createResListByIdの後にmakeIDDivをすると、IDの数は付加されず、class:IDが付加される", function(){
 					//exercise
-	  				res1.makeIDDivReflectingSameID(list.resListById);
-		  			res2.makeIDDivReflectingSameID(list.resListById);
-					res3.makeIDDivReflectingSameID(list.resListById);
+	  				res1.makeIDDiv(list.resListById);
+		  			res2.makeIDDiv(list.resListById);
+					res3.makeIDDiv(list.resListById);
 					//verify
 					expect(res1.reshead.html()).not.toMatch(/\[/);
 			 		expect(res2.reshead.html()).not.toMatch(/\[/);
@@ -716,12 +785,16 @@ describe("", function(){
 			  		expect(res3.reshead.find("div").hasClass("ID")).toEqual(true);		
 		  		});
 
-				it("classificationIDフラグが立っていても、第二変数にfalseを指定すると、IDの数は付加されず、class:IDが付加される", function(){
+				it("classificationIDフラグが立っていても、tooltipOnDicPageがfalseで記事ページならば、IDの数は付加されず、class:IDが付加される", function(){
 					//exercise
 					GM_setValue("classificationID", true);
-	  				res1.makeIDDivReflectingSameID(list.resListById, false);
-		  			res2.makeIDDivReflectingSameID(list.resListById, false);
-					res3.makeIDDivReflectingSameID(list.resListById, false);
+					GM_setValue("tooltipOnDicPage", false);
+					spyOn(res1.urlAnalyzer, "inArticlePage").and.returnValue(true);
+					spyOn(res2.urlAnalyzer, "inArticlePage").and.returnValue(true);
+					spyOn(res3.urlAnalyzer, "inArticlePage").and.returnValue(true);
+	  				res1.makeIDDiv(list.resListById);
+		  			res2.makeIDDiv(list.resListById);
+					res3.makeIDDiv(list.resListById);
 					//verify
 					expect(res1.reshead.html()).not.toMatch(/\[/);
 			 		expect(res2.reshead.html()).not.toMatch(/\[/);
@@ -731,17 +804,17 @@ describe("", function(){
 			  		expect(res3.reshead.find("div").hasClass("ID")).toEqual(true);		
 		  		});
 
-				it("classificationIDフラグを折った時、createRes,createResListByIdの後にmakeIDDivRefrectingSameIDをすると、同一IDの数と何番目か、また色分けがされる", function(){
+				it("classificationIDフラグを折った時、IDの数は付加されず、class:IDが付加される", function(){
 					//serUp
 		   			GM_setValue("classificationID", true);
-		  			res1.makeIDDivReflectingSameID(list.resListById);
-		  			res2.makeIDDivReflectingSameID(list.resListById);
-		  			res3.makeIDDivReflectingSameID(list.resListById);
+		  			res1.makeIDDiv(list.resListById);
+		  			res2.makeIDDiv(list.resListById);
+		  			res3.makeIDDiv(list.resListById);
 		  			GM_setValue("classificationID", false);
 		  			//exercise
-		  			res1.makeIDDivReflectingSameID(list.resListById);
-		  			res2.makeIDDivReflectingSameID(list.resListById);
-		  			res3.makeIDDivReflectingSameID(list.resListById);
+		  			res1.makeIDDiv(list.resListById);
+		  			res2.makeIDDiv(list.resListById);
+		  			res3.makeIDDiv(list.resListById);
 		  			//verify
 					expect(res1.reshead.html()).not.toMatch(/\[/);
 			 		expect(res2.reshead.html()).not.toMatch(/\[/);
@@ -752,15 +825,15 @@ describe("", function(){
 				});
 
 
-				it("classificationIDフラグを立て直した時、第二変数にfalseを指定すると、IDの数は付加されず、class:IDが付加される", function(){
+				it("classificationIDフラグを立て直した時、同一IDの数と何番目か、また色分けがされる", function(){
 					//exercise
+	  				res1.makeIDDiv(list.resListById);
+		  			res2.makeIDDiv(list.resListById);
+					res3.makeIDDiv(list.resListById);
 					GM_setValue("classificationID", true);
-	  				res1.makeIDDivReflectingSameID(list.resListById, false);
-		  			res2.makeIDDivReflectingSameID(list.resListById, false);
-					res3.makeIDDivReflectingSameID(list.resListById, false);
-					res1.makeIDDivReflectingSameID(list.resListById);
-		  			res2.makeIDDivReflectingSameID(list.resListById);
-		  			res3.makeIDDivReflectingSameID(list.resListById);
+					res1.makeIDDiv(list.resListById);
+		  			res2.makeIDDiv(list.resListById);
+		  			res3.makeIDDiv(list.resListById);
 					//verify
 		  			expect(res2.reshead.html()).toMatch(/\[1\/3\]/);
 		  			expect(res3.reshead.html()).toMatch(/\[4\/5\]/);
@@ -769,15 +842,15 @@ describe("", function(){
 		  			expect(res3.reshead.find("div").hasClass("IDMany")).toEqual(true);
 		  		});
 
-		  		it("makeIDDivRefrectingSameIDをした後、再度makeIDDivRefrectingSameIDをすると、IDの数とclassが付け替えられる", function(){
+		  		it("makeIDDivをした後、再度makeIDDivをすると、IDの数とclassが付け替えられる", function(){
 		  			//setUp
 		  			GM_setValue("classificationID", true);
-		  			res1.makeIDDivReflectingSameID(list.resListById);
-		  			res2.makeIDDivReflectingSameID(list.resListById);
-		  			res3.makeIDDivReflectingSameID(list.resListById);
-		   			res4.makeIDDivReflectingSameID(list.resListById);
-		  			res5.makeIDDivReflectingSameID(list.resListById);
-		  			res6.makeIDDivReflectingSameID(list.resListById);
+		  			res1.makeIDDiv(list.resListById);
+		  			res2.makeIDDiv(list.resListById);
+		  			res3.makeIDDiv(list.resListById);
+		   			res4.makeIDDiv(list.resListById);
+		  			res5.makeIDDiv(list.resListById);
+		  			res6.makeIDDiv(list.resListById);
 		  			cloneHeadAndBody(13, 9);
 		  			for(var i = 14; i <= 17; i++){
 		  				cloneHeadAndBody(i, 10);
@@ -799,12 +872,12 @@ describe("", function(){
 		   			res5 = list.resList[10];
 		   			res6 = list.resList[12];
 		  			//exercise
-		  			res1.makeIDDivReflectingSameID(list.resListById);
-		  			res2.makeIDDivReflectingSameID(list.resListById);
-		  			res3.makeIDDivReflectingSameID(list.resListById);
-		   			res4.makeIDDivReflectingSameID(list.resListById);
-		  			res5.makeIDDivReflectingSameID(list.resListById);
-		  			res6.makeIDDivReflectingSameID(list.resListById);
+		  			res1.makeIDDiv(list.resListById);
+		  			res2.makeIDDiv(list.resListById);
+		  			res3.makeIDDiv(list.resListById);
+		   			res4.makeIDDiv(list.resListById);
+		  			res5.makeIDDiv(list.resListById);
+		  			res6.makeIDDiv(list.resListById);
 		  			//verify
 		  			expect(res1.reshead.html()).not.toMatch(/\[/);
 		  			expect(res2.reshead.html()).toMatch(/\[1\/3\]/);
@@ -825,7 +898,7 @@ describe("", function(){
 				beforeEach(function(){
 					//setUp
 					GM_setValue("classificationID", true);
-					res2.makeIDDivReflectingSameID(list.resListById);
+					res2.makeIDDiv(list.resListById);
 				});
 
 				it("createResList、createResListById、の後にmakeIDTooltipをすると、mouseenterイベントでツールチップが出る", function(){
@@ -1205,7 +1278,7 @@ describe("", function(){
 					//setUp
 					GM_setValue("useNG", true);
 					//exercise
-					sut.applyNG(list.resList);
+					sut.applyNg(list.resList);
 					//verify
 					for(var i = 0; i < list.resList.length; i++){
 						expect(list.resList[i].reshead.hasClass("deleted")).toEqual(true);
@@ -1218,7 +1291,7 @@ describe("", function(){
 				it("useNGフラグが経っていない時、NGが適応されない", function(){
 					//setUp
 					//exercise
-					sut.applyNG(list.resList);
+					sut.applyNg(list.resList);
 					//verify
 					for(var i = 0; i < list.resList.length; i++){
 						expect(list.resList[i].reshead.hasClass("deleted")).toEqual(false);
@@ -1231,10 +1304,10 @@ describe("", function(){
 				it("useNGフラグを折った時、NGが適応されない", function(){
 					//setUp
 					GM_setValue("useNG", true);
-					sut.applyNG(list.resList);
+					sut.applyNg(list.resList);
 					GM_setValue("useNG", false);
 					//exercise
-					sut.applyNG(list.resList);
+					sut.applyNg(list.resList);
 					//verify
 					for(var i = 0; i < list.resList.length; i++){
 						expect(list.resList[i].reshead.hasClass("deleted")).toEqual(false);
@@ -1246,10 +1319,10 @@ describe("", function(){
 
 				it("useNGフラグを立て直した時、NGは適応される", function(){
 					//setUp
-					sut.applyNG(list.resList);
+					sut.applyNg(list.resList);
 					GM_setValue("useNG", true);
 					//exercise
-					sut.applyNG(list.resList);
+					sut.applyNg(list.resList);
 					//verify
 					for(var i = 0; i < list.resList.length; i++){
 						expect(list.resList[i].reshead.hasClass("deleted")).toEqual(true);
@@ -1269,7 +1342,7 @@ describe("", function(){
 					//setUp
 					GM_setValue("seethroughNG", true);
 					//exercise
-					sut.applyNG(list.resList);
+					sut.applyNg(list.resList);
 					//verify
 					expect(list.resList[0].reshead.css("display")).toEqual("none");
 					expect(list.resList[0].resbody.css("display")).toEqual("none");
@@ -1278,7 +1351,7 @@ describe("", function(){
 				it("seethroughNGフラグが立っていない時、display:noneにならない", function(){
 					//setUp
 					//exercise
-					sut.applyNG(list.resList);
+					sut.applyNg(list.resList);
 					//verify
 					expect(list.resList[0].reshead.css("display")).not.toEqual("none");
 					expect(list.resList[0].resbody.css("display")).not.toEqual("none");
@@ -1287,10 +1360,10 @@ describe("", function(){
 				it("seethroughNGフラグを折った時、display:noneにならない", function(){
 					//setUp
 					GM_setValue("seethroughNG", true);
-					sut.applyNG(list.resList);
+					sut.applyNg(list.resList);
 					GM_setValue("seethroughNG", false);
 					//exercise
-					sut.applyNG(list.resList);
+					sut.applyNg(list.resList);
 					//verify
 					expect(list.resList[0].reshead.css("display")).not.toEqual("none");
 					expect(list.resList[0].resbody.css("display")).not.toEqual("none");
@@ -1298,10 +1371,10 @@ describe("", function(){
 
 				it("seethroughNGフラグを立て直した時、display:noneになる", function(){
 					//setUp
-					sut.applyNG(list.resList);
+					sut.applyNg(list.resList);
 					GM_setValue("seethroughNG", true);
 					//exercise
-					sut.applyNG(list.resList);
+					sut.applyNg(list.resList);
 					//verify
 					expect(list.resList[0].reshead.css("display")).toEqual("none");
 					expect(list.resList[0].resbody.css("display")).toEqual("none");
@@ -1524,6 +1597,153 @@ describe("", function(){
 					callback(html);
 				});
 				spyOn(sut, "prependBbs");
+			});
+		});
+
+
+	});
+
+	describe("MemuOperatorのテスト", function(){
+		var reshead;
+		var resbody;
+		var res;
+		var list;
+		var sut;
+		var ngOperator;
+		beforeEach(function(){
+			reshead = [];
+			resbody = [];
+			res = [];
+			reshead[0] = '<dt class="reshead"><a name="31" class="resnumhead"></a>31 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5ng</dt>';
+			resbody[0] = '<dd class="resbody">NGID</dd>';
+			reshead[1] = '<dt class="reshead"><a name="32" class="resnumhead"></a>32 ： <span class="name">NGネーム</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+			resbody[1] = '<dd class="resbody">NGネーム</dd>';
+			reshead[2] = '<dt class="reshead"><a name="33" class="resnumhead"></a>33 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+			resbody[2] = '<dd class="resbody">NGワード</dd>';
+			reshead[3] = '<dt class="reshead"><a name="34" class="resnumhead"></a>34 ： <span class="name">31</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+			resbody[3] = '<dd class="resbody">NGレス</dd>';
+			var html = constructDl(reshead, resbody);
+			list = new c.ResCollection();
+			list.createResList($(html));
+			list.createResListById();
+			for(var i = 0; i < list.resList.length; i++){
+				list.resList[i].backupRes();
+				res[i] = list.resList[i];
+			}
+			ngOperator = new c.NgOperator();
+			sut = new c.MenuOperator(list, ngOperator);
+			$("body").append("<div id='sandbox'></div>");
+			$("#sandbox").append("<div id='bbs'><dl></dl></div><div id='ng'></div><ul id='contextMenu'></ul>");
+			for(var i = 0; i < res.length; i++){
+				res[i].makeIDDiv(list.resListById);
+				$("#bbs dl").append(res[i].reshead);
+				$("#bbs dl").append(res[i].resbody);
+			};
+			list.setContextMenu();
+			$("#ng").append("<textarea id='ngidTextarea'></textarea><textarea id='ngnameTextarea'></textarea>" + 
+				"<textarea id='ngresTextarea'></textarea><textarea id='ngresTextarea'></textarea>");
+			$("#contextMenu").append('<li id="ngidMenu">NGIDに追加</li><li id="ngnameMenu">NGNameに追加</li><li id="ngresMenu">このレスを削除</li>');
+			GM_setValue("useNG", true);
+			$("head").append("<style id='nicoDicBBSViewerCSS'></style>");
+		});
+
+		afterEach(function(){
+			$("#sandbox").remove();
+		})
+
+		describe("bindContextMenuのテスト", function(){
+			it("NGIDが空の時、右クリックからNGIDを登録して、また適応することができる", function(){
+				//exercise
+				sut.bindContextMenu();
+				res[0].reshead.find(".ID").trigger("click");
+				res[0].reshead.find("#contextMenu #ngidMenu").trigger("click");
+				//verify
+				expect(res[0].reshead.find("#contextMenu").size()).toEqual(0);
+				expect(res[0].reshead.hasClass("deleted")).toEqual(true);
+				expect(GM_getValue("ngid")).toEqual("b6fD7NC5ng");
+				expect($("#ngidTextarea").val()).toEqual("b6fD7NC5ng");
+			});
+
+			it("NGIDが空でないの時、右クリックからNGIDを登録して、また適応することができる", function(){
+				//setUp
+				GM_setValue("ngid", "dummyid");
+				//exercise
+				sut.bindContextMenu();
+				res[0].reshead.find(".ID").trigger("click");
+				res[0].reshead.find("#contextMenu #ngidMenu").trigger("click");
+				//verify
+				expect(res[0].reshead.find("#contextMenu").size()).toEqual(0);
+				expect(res[0].reshead.hasClass("deleted")).toEqual(true);
+				expect(GM_getValue("ngid")).toEqual("dummyid\nb6fD7NC5ng");
+				expect($("#ngidTextarea").val()).toEqual("dummyid\nb6fD7NC5ng");
+			});
+
+			it("NGIDが登録済みのとき、何もしない", function(){
+				//setUp
+				GM_setValue("ngid", "b6fD7NC5ng");
+				ngOperator.initNg();
+				ngOperator.applyNg(list.resList);
+				spyOn(ngOperator, "applyNg").and.callThrough();
+				//exercise
+				sut.bindContextMenu();
+				res[0].reshead.find(".ID").trigger("click");
+				res[0].reshead.find("#contextMenu #ngidMenu").trigger("click");
+				//verify
+				expect(ngOperator.applyNg).not.toHaveBeenCalled();
+			});
+
+			it("NGNameが空の時、右クリックからNGNameを登録して、また適応することができる", function(){
+				//exercise
+				sut.bindContextMenu();
+				res[1].reshead.find(".ID").trigger("click");
+				res[1].reshead.find("#contextMenu #ngnameMenu").trigger("click");
+				//verify
+				expect(res[1].reshead.find("#contextMenu").size()).toEqual(0);
+				expect(res[1].reshead.hasClass("deleted")).toEqual(true);
+				expect(GM_getValue("ngname")).toEqual("NGネーム");
+				expect($("#ngnameTextarea").val()).toEqual("NGネーム");
+			});
+
+			it("NGNameが空でないの時、右クリックからNGNameを登録して、また適応することができる", function(){
+				//setUp
+				GM_setValue("ngname", "dummyname");
+				//exercise
+				sut.bindContextMenu();
+				res[1].reshead.find(".ID").trigger("click");
+				res[1].reshead.find("#contextMenu #ngnameMenu").trigger("click");
+				//verify
+				expect(res[1].reshead.find("#contextMenu").size()).toEqual(0);
+				expect(res[1].reshead.hasClass("deleted")).toEqual(true);
+				expect(GM_getValue("ngname")).toEqual("dummyname\nNGネーム");
+				expect($("#ngnameTextarea").val()).toEqual("dummyname\nNGネーム");
+			});
+
+			it("NGNameが登録済みのとき、何もしない", function(){
+				//setUp
+				GM_setValue("ngname", "NGネーム");
+				ngOperator.initNg();
+				ngOperator.applyNg(list.resList);
+				spyOn(ngOperator, "applyNg").and.callThrough();
+				//exercise
+				sut.bindContextMenu();
+				res[1].reshead.find(".ID").trigger("click");
+				res[1].reshead.find("#contextMenu #ngnameMenu").trigger("click");
+				//verify
+				expect(ngOperator.applyNg).not.toHaveBeenCalled();
+			});
+
+			it("NGResが空の時、右クリックからNGResを登録して、また適応することができる", function(){
+				//exercise
+				sut.bindContextMenu();
+				spyOn(sut.urlAnalyzer, "getNowUrl").and.returnValue("http://dic.nicovideo.jp/b/a/bbs/1-");
+				spyOn(ngOperator.urlAnalyzer, "getNowUrl").and.returnValue("http://dic.nicovideo.jp/b/a/bbs/1-");
+				res[3].reshead.find(".ID").trigger("click");
+				res[3].reshead.find("#contextMenu #ngresMenu").trigger("click");
+				//verify
+				expect(res[3].reshead.find("#contextMenu").size()).toEqual(0);
+				expect(res[3].reshead.hasClass("deleted")).toEqual(true);
+				expect(GM_getValue("ngres")).toEqual("bbs:34");
+				expect($("#ngresTextarea").val()).toEqual("bbs:34");
 			});
 		});
 
