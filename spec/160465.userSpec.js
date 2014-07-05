@@ -1633,17 +1633,14 @@ describe("", function(){
 			ngOperator = new c.NgOperator();
 			sut = new c.MenuOperator(list, ngOperator);
 			$("body").append("<div id='sandbox'></div>");
-			$("#sandbox").append("<div id='bbs'><dl></dl></div><div id='ng'></div><ul id='contextMenu'></ul>");
+			$("#sandbox").append("<div id='bbs'><dl></dl></div><ul id='contextMenu'></ul>");
 			for(var i = 0; i < res.length; i++){
 				res[i].makeIDDiv(list.resListById);
 				$("#bbs dl").append(res[i].reshead);
 				$("#bbs dl").append(res[i].resbody);
 			};
 			list.setContextMenu();
-			$("#ng").append("<textarea id='ngidTextarea'></textarea><textarea id='ngnameTextarea'></textarea>" + 
-				"<textarea id='ngresTextarea'></textarea><textarea id='ngresTextarea'></textarea>");
 			$("#contextMenu").append('<li id="ngidMenu">NGIDに追加</li><li id="ngnameMenu">NGNameに追加</li><li id="ngresMenu">このレスを削除</li>');
-			GM_setValue("useNG", true);
 			$("head").append("<style id='nicoDicBBSViewerCSS'></style>");
 		});
 
@@ -1652,6 +1649,13 @@ describe("", function(){
 		})
 
 		describe("bindContextMenuのテスト", function(){
+			beforeEach(function(){
+				GM_setValue("useNG", true);
+				$("#sandbox").append("<div id='ng'></div>");
+				$("#ng").append("<textarea id='ngidTextarea'></textarea><textarea id='ngnameTextarea'></textarea>" + 
+				"<textarea id='ngresTextarea'></textarea><textarea id='ngresTextarea'></textarea>");
+			});
+
 			it("NGIDが空の時、右クリックからNGIDを登録して、また適応することができる", function(){
 				//exercise
 				sut.bindContextMenu();
@@ -1747,7 +1751,107 @@ describe("", function(){
 			});
 		});
 
+		describe("insertConfigHtmlのテスト", function(){
+			beforeEach(function(){
+				$("#sandbox").prepend('<ul id="topbarRightMenu" class="popupRightMenu"><li id="topbarLogoutMenu" style="display:none;">' +
+					'<a href="/p/logout">ログアウト</a></li></ul>');
 
+			});
+
+			var setFlag = function(ids){
+				for(var i = 0; i < ids.length; i++){
+					GM_setValue(ids[i], true);
+				}
+			};
+
+			it("掲示板と設定画面の切り替えがツールバーの特定のところに追加される", function(){
+				//exercise
+				sut.insertConfigHtml();
+				//verify
+				expect($("#topbarLogoutMenu+li").html()).toEqual("NicoDicBBSViewer");
+				expect($("#topbarLogoutMenu+li+#bbsLi").hasClass("selected")).toEqual(true);
+				expect($("#topbarLogoutMenu+li+#bbsLi a").html()).toEqual("掲示板を表示する");
+				expect($("#topbarLogoutMenu+li+#bbsLi+#ngLi").hasClass("selected")).toEqual(false);
+				expect($("#topbarLogoutMenu+li+#bbsLi+#ngLi a").html()).toEqual("設定画面を表示する")
+			});
+
+			it("NGが設定されていないときNGの設定画面が追加される", function(){
+				//exercise
+				sut.insertConfigHtml();
+				//verify
+				expect($("#bbs~#ng").size()).toEqual(1);
+				expect($("#bbs~#ng div").filter(function(){return $(this).css("float") === "left"}).size()).toEqual(4);
+				expect($("#bbs~#ng div p").size()).toEqual(4);
+				expect($("#bbs~#ng div textarea").size()).toEqual(4);
+				$("#bbs~#ng div textarea").each(function(){expect($(this).val()).toEqual("")});
+			});
+
+			it("NGが設定されていないときNGの設定画面が追加される", function(){
+				//setUp
+				var nglist = ["ngid", "ngname", "ngword", "ngres"];
+				for(var i = 0; i < nglist.length; i++){
+					GM_setValue(nglist[i], nglist[i]);
+				}
+				//exercise
+				sut.insertConfigHtml();
+				//verify
+				expect($("#bbs~#ng").size()).toEqual(1);
+				expect($("#bbs~#ng div").filter(function(){return $(this).css("float") === "left"}).size()).toEqual(4);
+				expect($("#bbs~#ng div p").size()).toEqual(4);
+				expect($("#bbs~#ng div textarea").size()).toEqual(4);
+				var i = 0;
+				$("#bbs~#ng div textarea").each(function(){expect($(this).val()).toEqual(nglist[i]); i++;});
+			});
+
+			it("設定が全てundefinedあるいはfalseのとき、設定のチェックボックスが追加されて、全てにチェックがついていない", function(){
+				//exercise
+				sut.insertConfigHtml();
+				//verify
+				expect($("#ng form > ul > li").size()).toEqual(5);
+				expect($("#ng form > ul > li > ul").eq(0).find("input:checkbox").size()).toEqual(2);
+				expect($("#ng form > ul > li > ul").eq(1).find("input:checkbox").size()).toEqual(4);
+				expect($("#ng form > ul > li > ul").eq(2).find("input:checkbox").size()).toEqual(2);
+				expect($("#ng form input:checkbox").size()).toEqual(10);
+				expect($("#ng form input:checkbox:not(:checked)").size()).toEqual(10);
+			});
+
+			it("設定が全てtrueのとき、設定のチェックボックスが追加されて、全てにチェックがついていない", function(){
+				//exercise
+				setFlag(["autoLoad", "useNG", "seethroughNG", "tooltipOnDicPage", "showIDTooltip", "showResAnchorTooltip", "showResNumberTooltip",
+					"showResHandleTooltip",	"classificationID", "classificationResNumber"]);
+				//exercise
+				sut.insertConfigHtml();
+				//verify
+				expect($("#ng form > ul > li").size()).toEqual(5);
+				expect($("#ng form > ul > li > ul").eq(0).find("input:checkbox").size()).toEqual(2);
+				expect($("#ng form > ul > li > ul").eq(1).find("input:checkbox").size()).toEqual(4);
+				expect($("#ng form > ul > li > ul").eq(2).find("input:checkbox").size()).toEqual(2);
+				expect($("#ng form input:checkbox").size()).toEqual(10);
+				expect($("#ng form input:checkbox:checked").size()).toEqual(10);
+			});
+
+			it("設定画面にボタンが追加される", function(){
+				//exercise
+				sut.insertConfigHtml();
+				//verify
+				expect($("#ng button").size()).toEqual(3);
+				expect($("#ng button").eq(0).attr("id")).toEqual("decideNG");
+				expect($("#ng button").eq(1).attr("id")).toEqual("cancelNG");
+				expect($("#ng button").eq(2).attr("id")).toEqual("backToBbsButton");
+			});
+
+			it("コンテクストメニューのhtmlが追加される", function(){
+				//setUp
+				$("#contextMenu").remove();
+				//exercise
+				sut.insertConfigHtml();
+				//verify
+				expect($("#contextMenu li").size()).toEqual(3);
+				expect($("#contextMenu li").eq(0).attr("id")).toEqual("ngidMenu");
+				expect($("#contextMenu li").eq(1).attr("id")).toEqual("ngnameMenu");
+				expect($("#contextMenu li").eq(2).attr("id")).toEqual("ngresMenu");
+			});
+		});
 	});
 });
 

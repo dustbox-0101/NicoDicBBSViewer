@@ -565,29 +565,66 @@ var net_threeaster_NicoDicBBSViewer = {};
 		});
 	};
 
-	var ajustSideMenu = function(){
-		if($("html").scrollTop() < $("#bbs, #ng").offset().top){
-			$("#sidemenu").css({position : "absolute", top : $("#bbs, #ng").offset().top + 100 + "px"});
-		}else{
-			$("#sidemenu").css({position : "fixed", top : "100px"});
+
+	MenuOperator.prototype.insertConfigHtml = function(){
+		var self = this;
+		var appendNgTextarea = function(labelcore, idcore){
+			var text = "";
+			text = text + '<div style="float:left; width:24%"><p>改行で区切って' + labelcore + 'を入力or削除してください。</p>';
+			text = text + '<textarea id="' + idcore + 'Textarea" cols="20" rows="10" placeholder="' + labelcore + 'を改行で区切って入力してください。">';
+			text = text + (GM_getValue(idcore) ? GM_getValue(idcore) : "");
+			text = text + '</textarea></div>';
+			$("#ng").append(text);
 		}
+		var appendConfigLi = function(parent, id, label){
+			var text = "";
+			text = text + '<li><input id="' + id + 'Checkbox" type="checkbox" ' + (GM_getValue(id) ? "checked = 'checked'" : "") + '/>' + label + '</li>';
+			parent.append(text);
+		}
+		var appendSubList = function(parent, list, label){
+			var li = $("<li>" + label + "</li>");
+			li.append(list);
+			parent.append(li);
+		}
+		var getSubUl = function(){
+			return $('<ul style="list-style-type: none; margin-left:5px;"></ul>');
+		}
+		$("#topbarLogoutMenu").after('<li>NicoDicBBSViewer</li><li id="bbsLi" class="selected"><a href="#">掲示板を表示する</a></li><li id="ngLi"><a href="#">設定画面を表示する</a></li>');
+		$("#bbs").after('<div id="ng"></div>');
+		appendNgTextarea("NGID", "ngid");
+		appendNgTextarea("NGName", "ngname");
+		appendNgTextarea("NGワード", "ngword");
+		appendNgTextarea("NGレスを(BBSのURL:レス番号)の書式で", "ngres");
+
+		$("#ng").append('<div style="clear:left;"><form><ul style="list-style-type: none;"></ul></form><div>');
+		var parentUl = $("#ng form ul");
+		appendConfigLi(parentUl, "autoLoad", "下までスクロールした時に次のページを読み込む");
+
+		var ngUl = getSubUl();
+		appendConfigLi(ngUl, "useNG", "NG機能を使用する");
+		appendConfigLi(ngUl, "seethroughNG", "NGが適用されたレスを表示しない");
+		appendSubList(parentUl, ngUl, "NG機能");
+
+		appendConfigLi(parentUl, "tooltipOnDicPage", "記事ページでもID、番号の色分けやツールチップを表示する");
+
+		var tooltipUl = getSubUl();
+		appendConfigLi(tooltipUl, "showIDTooltip", 'ID(<span style="text-decoration:underline;">ID</span>)ツールチップを表示する');
+		appendConfigLi(tooltipUl, "showResAnchorTooltip", 'レスアンカー(<span style="color: rgb(0, 102, 204);">>>1</span>)ツールチップを表示する');
+		appendConfigLi(tooltipUl, "showResNumberTooltip", 'レス番(<span style="text-decoration:underline;">1</span>)ツールチップを表示する');
+		appendConfigLi(tooltipUl, "showResHandleTooltip", 'レス番ハンドル(<span style="color: rgb(0, 136, 0); font-weight: bold;">1</span>)ツールチップを表示する');
+		appendSubList(parentUl, tooltipUl, "ツールチップ(更新時有効)");
+
+		var colorUl = getSubUl();
+		appendConfigLi(colorUl, "classificationID", "IDを色分けし、そのIDのレスの回数を表示する");
+		appendConfigLi(colorUl, "classificationResNumber", "参照されているレス番を色分けする");
+		appendSubList(parentUl, colorUl, "色分け(更新時有効)");
+
+		$("#ng").append('<button id="decideNG">保存</button>　<button id="cancelNG">キャンセル</button>　<button id="backToBbsButton">掲示板に戻る</button></div>' + 
+			' <ul id="contextMenu"><li id="ngidMenu">NGIDに追加</li><li id="ngnameMenu">NGNameに追加</li><li id="ngresMenu">このレスを削除</li></ul>');
 	};
-	
-	var getCheckbox = function(id){
-		return '<input id="' + id + 'Checkbox" type="checkbox" ' + (GM_getValue(id) ? "checked = 'checked'" : "") + '/>';
-	}
 
-	var setMenu = function(){
-		if(GM_getValue("switcherInTopMenu")){
-			$("#topbarLogoutMenu").after('<li>NicoDicBBSViewer</li><li id="bbsLi" class="selected"><a href="#">掲示板を表示する</a></li><li id="ngLi"><a href="#">設定画面を表示する</a></li>');
-		}else{
-			$("body").prepend('<ul id="sidemenu" style="top:100px; float:left; position:fixed; list-style-type:none; padding:0px"><li id="bbsLi" class="selected">掲示板</li><li id="ngLi">設定</li></ul>');
-
-		}
-		$("#bbs").after('<div id="ng"><div style="float:left; width:24%"><p>改行で区切ってNGIDを入力or削除してください。</p><textarea id="ngidTextarea" cols="20" rows="10" placeholder="NGIDを改行で区切って入力してください。">' + (nglist.ngidText ? nglist.ngidText : "")  + '</textarea></div><div style="float:left; width:24%"><p>改行で区切ってNGNameを入力or削除してください。</p><textarea id="ngnameTextarea" cols="20" rows="10" placeholder="NGNameを改行で区切って入力してください。">' + (nglist.ngnameText ? nglist.ngnameText : "" ) + '</textarea></div><div style="float:left; width:24%"><p>改行で区切ってNGワードを入力or削除してください。</p><textarea id="ngwordTextarea" cols="20" rows="10" placeholder="NGワードを改行で区切って入力してください。">' + (nglist.ngwordText ? nglist.ngwordText : "")  + '</textarea></div><div style="float:left; width:24%"><p>改行で区切って(BBSのURL:レス番号)の書式でNGレスを入力or削除してください。</p><textarea id="ngresTextarea" cols="20" rows="10" placeholder="NGレスを(BBSのURL:レス番号)の書式で改行で区切って入力してください。">' + (nglist.ngresText ? nglist.ngresText : "") + '</textarea></div><div style="clear:left;"><form><ul style="list-style-type: none;"><li>' + getCheckbox("autoLoad") + '下までスクロールした時に次のページを読み込む</li><li>NG機能<ul style="list-style-type: none; margin-left:5px;"><li>' + getCheckbox("useNG") + 'NG機能を使用する</li><li>' + getCheckbox("seethroughNG") + 'NGが適用されたレスを表示しない</li></ul></li><li>' + getCheckbox("tooltipOnDicPage") +'記事ページでもID、番号の色分けやツールチップを表示する</li><li>ツールチップ(更新時有効)<ul style="list-style-type: none; margin-left:5px;"><li>' + getCheckbox("showIDTooltip") +'ID(<span style="text-decoration:underline;">ID</span>)ツールチップを表示する</li><li>' + getCheckbox("showResAnchorTooltip") +'レスアンカー(<span style="color: rgb(0, 102, 204);">>>1</span>)ツールチップを表示する</li><li>' + getCheckbox("showResNumberTooltip") + 'レス番(<span style="text-decoration:underline;">1</span>)ツールチップを表示する</li><li>' + getCheckbox("showResHandleTooltip") + 'レス番ハンドル(<span style="color: rgb(0, 136, 0); font-weight: bold;">1</span>)ツールチップを表示する</li></ul></li><li>色分け(更新時有効)<ul style="list-style-type: none; margin-left:5px;"><li>' + getCheckbox("classificationID") + 'IDを色分けし、そのIDのレスの回数を表示する</li><li>' + getCheckbox("classificationResNumber") +'参照されているレス番を色分けする</li></ul></li><ul><li>UI<ul><li>' + getCheckbox("switcherInTopMenu") + '掲示板/設定画面切り替えボタンを上のメニュー内に入れる(更新時有効)</li></ul></li></ul></ul></form><button id="decideNG">保存</button>　<button id="cancelNG">キャンセル</button>　<button id="backToBbsButton">掲示板に戻る</button></div></div> <ul id="contextMenu"><li id="ngidMenu">NGIDに追加</li><li id="ngnameMenu">NGNameに追加</li><li id="ngresMenu">このレスを削除</li></ul>');
+	MenuOperator.prototype.bindMenu = function(){
 		var contents = $("#bbs, #ng");
-		$(window).scroll(ajustSideMenu);
-		ajustSideMenu();
 		var backBBS = function(){
 			if($(".selected").attr("id") === "bbsLi"){
 				bbsScroll = $("html").scrollTop();
@@ -887,9 +924,6 @@ var net_threeaster_NicoDicBBSViewer = {};
 	var c = net_threeaster_NicoDicBBSViewer;
 	c.removeUselessLines = removeUselessLines;
 	c.Res = Res;
-	c.ajustSideMenu = ajustSideMenu;
-	c.getCheckbox = getCheckbox;
-	c.setMenu = setMenu;
 	c.ManagerToReadBbs = ManagerToReadBbs;
 	c.prependBbs = prependBbs;
 	c.nextBbs = nextBbs;
