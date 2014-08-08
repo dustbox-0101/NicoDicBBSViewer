@@ -107,7 +107,7 @@ describe("", function(){
 		});
 	});
 	
-	describe("insertStyleのテスト", function(){
+	describe("insertStyleのテスト", function(){//TODO 実際にタグを挿入してスタイルを確かめる
 		it("styleタグが挿入される", function(){
 			//exercise
 			c.insertStyle();
@@ -548,6 +548,31 @@ describe("", function(){
 				expect(res[0].reshead.find("span.NumberHandle > div .reshead").size()).toEqual(0);
 				res[0].reshead.find("span.NumberHandle").trigger("mouseleave");
 			});
+
+			it("tooltipOnDicPageがオフの時、掲示板ページではフラグがオンになっていればツールチップは作られる", function(){
+				//setUP
+				GM_setValue("showIDTooltip", true);
+				GM_setValue("showResAnchorTooltip", true);
+				GM_setValue("showResNumberTooltip", true);
+				GM_setValue("showResHandleTooltip", true);
+				spyOn(list.urlAnalyzer, "inArticlePage").and.returnValue(false);
+				//exercise
+				list.makeTooltips(list);
+				//verify
+				res[0].reshead.find("div[class^='ID']").trigger("mouseenter");
+				expect(res[0].reshead.find("div[class^='ID'] > div .reshead").size()).toEqual(1);
+				res[0].reshead.find("div[class^='ID']").trigger("mouseleave");
+				res[0].resbody.find("a.dic").trigger("mouseenter");
+				expect(res[0].resbody.find("span.numTooltip > div .reshead").size()).toEqual(1);
+				res[0].resbody.find("a.dic").trigger("mouseleave");
+				res[0].reshead.find("div[class^='Number']").trigger("mouseenter");
+				expect(res[0].reshead.find("div[class^='Number'] div:not([class^='Number']) .reshead").size()).toEqual(1);
+				res[0].reshead.find("div[class^='Number']").trigger("mouseleave");
+				res[0].reshead.find("span.NumberHandle").trigger("mouseenter");
+				expect(res[0].reshead.find("span.NumberHandle > div .reshead").size()).toEqual(1);
+				res[0].reshead.find("span.NumberHandle").trigger("mouseleave");
+			});
+
 		});
 
 		describe("showResのテスト", function(){
@@ -750,7 +775,7 @@ describe("", function(){
 	   			res4 = list.resList[9];
 	   			res5 = list.resList[10];
 	   			res6 = list.resList[12];
-	   			GM_setValue("tooltipOnDicPage", true)
+	   			GM_setValue("tooltipOnDicPage", true);
 			});
 
 			describe("makeIDDivのテスト", function(){
@@ -789,9 +814,7 @@ describe("", function(){
 					//exercise
 					GM_setValue("classificationID", true);
 					GM_setValue("tooltipOnDicPage", false);
-					spyOn(res1.urlAnalyzer, "inArticlePage").and.returnValue(true);
-					spyOn(res2.urlAnalyzer, "inArticlePage").and.returnValue(true);
-					spyOn(res3.urlAnalyzer, "inArticlePage").and.returnValue(true);
+					spyOn(list.urlAnalyzer, "inArticlePage").and.returnValue(true);
 	  				res1.makeIDDiv(list.resListById);
 		  			res2.makeIDDiv(list.resListById);
 					res3.makeIDDiv(list.resListById);
@@ -802,6 +825,23 @@ describe("", function(){
 			  		expect(res1.reshead.find("div").hasClass("ID")).toEqual(true);
 			  		expect(res2.reshead.find("div").hasClass("ID")).toEqual(true);
 			  		expect(res3.reshead.find("div").hasClass("ID")).toEqual(true);		
+		  		});
+
+		  		it("classificationIDフラグが立っていて、tooltipOnDicPageがfalseで掲示板ページならば、同一IDの数と何番目か、また色分けがされる", function(){
+					//exercise
+					GM_setValue("classificationID", true);
+					GM_setValue("tooltipOnDicPage", false);
+					spyOn(list.urlAnalyzer, "inArticlePage").and.returnValue(false);
+	  				res1.makeIDDiv(list.resListById);
+		  			res2.makeIDDiv(list.resListById);
+					res3.makeIDDiv(list.resListById);
+					//verify
+		  			expect(res1.reshead.html()).not.toMatch(/\[/);
+		  			expect(res2.reshead.html()).toMatch(/\[1\/3\]/);
+		  			expect(res3.reshead.html()).toMatch(/\[4\/5\]/);
+		  			expect(res1.reshead.find("div").hasClass("ID")).toEqual(true);
+		  			expect(res2.reshead.find("div").hasClass("IDMulti")).toEqual(true);
+		  			expect(res3.reshead.find("div").hasClass("IDMany")).toEqual(true);		
 		  		});
 
 				it("classificationIDフラグを折った時、IDの数は付加されず、class:IDが付加される", function(){
@@ -1393,10 +1433,12 @@ describe("", function(){
 			basicUrl = "http://dic.nicovideo.jp/b/a/bbs/";
 			urls = [];
 			$("body").append("<div id='sandbox'></div>");
+			$("head").append("<style id='nicoDicBBSViewerCSS'></style>");
 		});
 
 		afterEach(function(){
 			$("#sandbox").remove();
+			$("#nicoDicBBSViewerCSS").remove();
 		})
 
 		describe("コンストラクタのテスト", function(){
@@ -1590,17 +1632,436 @@ describe("", function(){
 			});
 		});
 
-
-		xdescribe("readPreviousBbsのテスト", function(){
+		describe("initSmallBbsのテスト", function(){
 			beforeEach(function(){
-				spyOn($, "get").and.callFake(function(url, callback){
-					callback(html);
-				});
-				spyOn(sut, "prependBbs");
+				$("body").append("<div id='sandbox'></div>");
+				$("#sandbox").append("<div id='bbs'><dl></dl></div>");
+				$("#bbs dl").append(
+					'<div class="pager"><a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a><a href="/b/a/bbs/1-">1-</a></div>' +
+					'<dt class="reshead"><a name="31" class="resnumhead"></a>31 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' + 
+					'<dd class="resbody">NGID</dd>' + 
+					'<dt class="reshead"><a name="32" class="resnumhead"></a>32 ： <span class="name">NGネーム</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
+					'<dd class="resbody">NGネーム</dd>');
+				$("#sandbox").prepend("<div id='topline' style='height: 36px; position: fixed;><ul id='topbarRightMenu' class='popupRightMenu'>" + 
+					"<li id='topbarLogoutMenu' style='display:none;''><a href='/p/logout'>ログアウト</a></li></ul></div>");
+				urls[0] = basicUrl + "1-";
+				var nowUrl = "http://dic.nicovideo.jp/a/bbs";
+				spyOn(urlAnalyzer, "getNowUrl").and.returnValue(nowUrl);
+				sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+				GM_setValue("tooltipOnDicPage", true);
+				GM_setValue("showIDTooltip", true);
+				GM_setValue("useNG", true);
+				GM_setValue("ngname", "NGネーム");
+			});
+
+			afterEach(function(){
+				$("#sandbox").remove();
+			})
+
+			it("IDの色分けやツールチップ、コンテクストメニューやメニュー等が全て用意される", function(){
+				//setUp
+				GM_setValue("classificationID", true);
+				//exercise
+				sut.initSmallBbs();
+				//verify
+				expect($(".navi").size()).toEqual(0);
+				var res = $("#bbs dl dt").eq(0);
+				expect(res.html()).toMatch(/\[1\/2\]/);
+		  		expect(res.find("div").hasClass("IDMulti")).toEqual(true);
+		  		res.find(".IDMulti").trigger("mouseenter");
+		  		expect(res.find("div[class^='ID'] > div .reshead").size()).toEqual(2);
+		  		res.find(".IDMulti").trigger("mouseleave");
+		  		expect(res.find("div[class^='ID'] > div").size()).toEqual(0);
+		  		expect(res.hasClass("deleted")).toEqual(false);
+		  		expect($("#bbs dl dt").eq(1).hasClass("deleted")).toEqual(true);
+		  		expect(res.find("#contextMenu").size()).toEqual(0);
+		  		res.find(".IDMulti").trigger("click");
+		  		expect(res.find("#contextMenu").size()).toEqual(1);
+		  		res.find(".IDMulti #contextMenu #ngidMenu").trigger("click");
+		  		expect($("#bbs dl .deleted").size()).toEqual(2);
+		  		expect($("#bbs").css("display")).not.toEqual("none");
+		  		$("#ngLi").trigger("click");
+		  		expect($("#bbs").css("display")).toEqual("none");
+		  		$("#useNGCheckbox").attr("checked", false);
+		  		$("#decideNG").trigger("click");
+		  		expect($("#bbs dl .deleted").size()).toEqual(0);
+		  		$("#bbsLi").trigger("click");
+		  		expect($("#bbs").css("display")).not.toEqual("none");
 			});
 		});
 
 
+		describe("readPreviousBbsのテスト", function(){
+			var htmlDl;
+			beforeEach(function(){
+				urls[0] = basicUrl + "1-";
+				urls[1] = basicUrl + "31-";
+				urls[2] = basicUrl + "61-";
+				var htmlHead = "<div id='bbs'>" +
+					'<div class="pager"><a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a><a href="/b/a/bbs/1-">1-</a></div>' +
+					"<dl id='bbsmain'>";
+				htmlDl = "<dt>a</dt>";
+				var htmlTail = "</dl>" +
+					'<div class="pager"><a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a><a href="/b/a/bbs/1-">1-</a></div>' +
+					"</div>";
+				var html = htmlHead + htmlDl + htmlTail;
+				$("#sandbox").append(html);
+				spyOn($, "get").and.callFake(function(url, callback){
+					callback(html);
+				});
+			});
+
+			afterEach(function(){
+				$("#sandbox").remove();
+			})
+
+			it("前にページ2つ以上有るとき、前のページのdlを引数にprependBbsを呼び出す。このときnowloadingが表示され、前へボタンは表示されたままで、startIndexが1減り、ロックがかかる", function(){
+				//setUp
+				spyOn(urlAnalyzer, "getNowUrl").and.returnValue(basicUrl + "61-");
+				sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+				spyOn(sut, "prependBbs");
+				spyOn(urlAnalyzer, "inArticlePage").and.returnValue(false);
+				sut.initPager();
+				//exercise
+				sut.readPreviousBbs();
+				//verify
+				expect(sut.prependBbs.calls.argsFor(0)[0].html()).toEqual(htmlDl);
+				expect(sut.isNowLoading).toEqual(true);
+				expect(sut.startIndex).toEqual(1);
+				expect($("#loadPreviousPageLinks").size()).toEqual(1);
+				expect($("#loading").html()).toEqual("now loading...");
+			});
+
+			it("前にページが1つのとき、前へボタンは消える", function(){
+				//setUp
+				spyOn(urlAnalyzer, "getNowUrl").and.returnValue(basicUrl + "31-");
+				sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+				spyOn(sut, "prependBbs");
+				spyOn(urlAnalyzer, "inArticlePage").and.returnValue(false);
+				sut.initPager();
+				//exercise
+				sut.readPreviousBbs();
+				//verify
+				expect(sut.prependBbs.calls.argsFor(0)[0].html()).toEqual(htmlDl);
+				expect(sut.isNowLoading).toEqual(true);
+				expect(sut.startIndex).toEqual(0);
+				expect($("#loadPreviousPageLinks").size()).toEqual(0);
+				expect($("#loading").html()).toEqual("now loading...");
+			});
+
+			it("前にページが無いとき、何も起こらない", function(){
+				//setUp
+				spyOn(urlAnalyzer, "getNowUrl").and.returnValue(basicUrl + "1-");
+				sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+				spyOn(sut, "prependBbs");
+				spyOn(urlAnalyzer, "inArticlePage").and.returnValue(false);
+				sut.initPager();
+				//exercise
+				sut.readPreviousBbs();
+				//verify
+				expect(sut.prependBbs).not.toHaveBeenCalledWith();
+				expect(sut.isNowLoading).toEqual(false);
+				expect(sut.startIndex).toEqual(0);
+				expect($("#loading").size()).toEqual(0);
+			});
+
+			it("isNowLoadingがtrueのとき、何も起こらない", function(){
+				//setUp
+				spyOn(urlAnalyzer, "getNowUrl").and.returnValue(basicUrl + "61-");
+				sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+				spyOn(sut, "prependBbs");
+				spyOn(urlAnalyzer, "inArticlePage").and.returnValue(false);
+				sut.initPager();
+				sut.isNowLoading = true;
+				//exercise
+				sut.readPreviousBbs();
+				//verify
+				expect(sut.prependBbs).not.toHaveBeenCalledWith();
+				expect(sut.isNowLoading).toEqual(true);
+				expect(sut.startIndex).toEqual(2);
+				expect($("#loading").size()).toEqual(0);
+			});
+		});
+
+		describe("prependBbsのテスト", function(){
+			var appendDl;
+			var sut;
+			beforeEach(function(){
+				GM_setValue("useNG", true);
+				GM_setValue("showIDTooltip", true);
+				GM_setValue("classificationID", true);
+				GM_setValue("tooltipOnDicPage", true);
+				GM_setValue("ngid", "b6fD7NC5x/");
+				$("#sandbox").append("<div id='bbs'><dl>" +
+					'<dt class="reshead"><a name="33" class="resnumhead"></a>33 ： <span class="name">NGネーム</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
+					'<dd class="resbody">NGネーム</dd>' +
+					"</dl></div>");
+				appendDl = $("<dl>" +
+					'<dt class="reshead"><a name="31" class="resnumhead"></a>31 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
+					'<dd class="resbody">NGID</dd>' +
+					'<dt class="reshead"><a name="32" class="resnumhead"></a>32 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5ng</dt>' +
+					'<dd class="resbody">NGID</dd>' +
+					"</dl>");
+				urls[0] = basicUrl + "1-";
+				urls[1] = basicUrl + "31-";
+				urls[2] = basicUrl + "61-";
+				$("#sandbox dl").prepend("<p id='loading'>now loading...</p>");
+				spyOn(urlAnalyzer, "getNowUrl").and.returnValue(basicUrl + "61-");
+				spyOn(urlAnalyzer, "inArticlePage").and.returnValue(false);
+				sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+				sut.isNowLoading = true;
+				sut.startIndex = 1;
+				sut.initSmallBbs();
+			});
+
+			it("prependBbsで、パラメータの中身が#bbs dlの前に追加される", function(){
+				//exercise
+				sut.prependBbs(appendDl);
+				//verify
+				expect($("#bbs dl dt").size()).toEqual(3);
+				var res = $("#bbs dl dt").eq(0);
+				expect(res.html()).toMatch(/\[1\/2\]/);
+				expect(res.hasClass("deleted")).toEqual(true);
+				expect($("#loading").size()).toEqual(0);
+				expect(sut.isNowLoading).toEqual(false);
+				var res2 = $("#bbs dl dt").eq(1);
+				expect(res2.hasClass("deleted")).toEqual(false);
+				expect(res2.find("#contextMenu").size()).toEqual(0);
+				res2.find(".ID").trigger("click");
+				expect(res2.find("#contextMenu").size()).toEqual(1);
+				res2.find("#contextMenu #ngidMenu").trigger("click");
+				expect(res2.hasClass("deleted")).toEqual(true);
+			});
+		});
+
+		describe("readNextBbsのテスト", function(){
+			var htmlDl;
+			beforeEach(function(){
+				urls[0] = basicUrl + "1-";
+				urls[1] = basicUrl + "31-";
+				urls[2] = basicUrl + "61-";
+				var htmlHead = "<div id='bbs'>" +
+					'<div class="pager"><a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a><a href="/b/a/bbs/1-">1-</a></div>' +
+					"<dl id='bbsmain'>";
+				htmlDl = "<dt>a</dt>";
+				var htmlTail = "</dl>" +
+					'<div class="pager"><a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a><a href="/b/a/bbs/1-">1-</a></div>' +
+					"</div>";
+				var html = htmlHead + htmlDl + htmlTail;
+				$("#sandbox").append(html);
+				spyOn($, "get").and.callFake(function(url, callback){
+					callback(html);
+				});
+			});
+
+			afterEach(function(){
+				$("#sandbox").remove();
+			})
+
+			it("次にページ2つ以上有るとき、前のページのdlを引数にappendBbsを呼び出す。このときnowloadingが表示され、前へボタンは表示されたままで、startIndexが1減り、ロックがかかる", function(){
+				//setUp
+				spyOn(urlAnalyzer, "getNowUrl").and.returnValue(basicUrl + "1-");
+				sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+				spyOn(sut, "appendBbs");
+				spyOn(urlAnalyzer, "inArticlePage").and.returnValue(false);
+				sut.initPager();
+				//exercise
+				sut.readNextBbs();
+				//verify
+				expect(sut.appendBbs.calls.argsFor(0)[0].html()).toEqual(htmlDl);
+				expect(sut.isNowLoading).toEqual(true);
+				expect(sut.endIndex).toEqual(1);
+				expect($("#loadNextPageLinks").size()).toEqual(1);
+				expect($("#loading").html()).toEqual("now loading...");
+			});
+
+			it("次にページが1つのとき、前へボタンは消える", function(){
+				//setUp
+				spyOn(urlAnalyzer, "getNowUrl").and.returnValue(basicUrl + "31-");
+				sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+				spyOn(sut, "appendBbs");
+				spyOn(urlAnalyzer, "inArticlePage").and.returnValue(false);
+				sut.initPager();
+				//exercise
+				sut.readNextBbs();
+				//verify
+				expect(sut.appendBbs.calls.argsFor(0)[0].html()).toEqual(htmlDl);
+				expect(sut.isNowLoading).toEqual(true);
+				expect(sut.endIndex).toEqual(2);
+				expect($("#loadNextPageLinks").size()).toEqual(0);
+				expect($("#loading").html()).toEqual("now loading...");
+			});
+
+			it("次にページが無いとき、何も起こらない", function(){
+				//setUp
+				spyOn(urlAnalyzer, "getNowUrl").and.returnValue(basicUrl + "61-");
+				sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+				spyOn(sut, "appendBbs");
+				spyOn(urlAnalyzer, "inArticlePage").and.returnValue(false);
+				sut.initPager();
+				//exercise
+				sut.readNextBbs();
+				//verify
+				expect(sut.appendBbs).not.toHaveBeenCalledWith();
+				expect(sut.isNowLoading).toEqual(false);
+				expect(sut.endIndex).toEqual(2);
+				expect($("#loading").size()).toEqual(0);
+			});
+
+			it("isNowLoadingがtrueのとき、何も起こらない", function(){
+				//setUp
+				spyOn(urlAnalyzer, "getNowUrl").and.returnValue(basicUrl + "1-");
+				sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+				spyOn(sut, "appendBbs");
+				spyOn(urlAnalyzer, "inArticlePage").and.returnValue(false);
+				sut.initPager();
+				sut.isNowLoading = true;
+				//exercise
+				sut.readNextBbs();
+				//verify
+				expect(sut.appendBbs).not.toHaveBeenCalledWith();
+				expect(sut.isNowLoading).toEqual(true);
+				expect(sut.endIndex).toEqual(0);
+				expect($("#loading").size()).toEqual(0);
+			});
+		});
+
+		describe("appendBbsのテスト", function(){
+			var appendDl;
+			var sut;
+			beforeEach(function(){
+				GM_setValue("useNG", true);
+				GM_setValue("showIDTooltip", true);
+				GM_setValue("classificationID", true);
+				GM_setValue("tooltipOnDicPage", true);
+				GM_setValue("ngid", "b6fD7NC5x/");
+				$("#sandbox").append("<div id='bbs'><dl>" +
+					'<dt class="reshead"><a name="31" class="resnumhead"></a>31 ： <span class="name">NGネーム</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
+					'<dd class="resbody">NGネーム</dd>' +
+					"</dl></div>");
+				appendDl = $("<dl>" +
+					'<dt class="reshead"><a name="32" class="resnumhead"></a>32 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
+					'<dd class="resbody">NGID</dd>' +
+					'<dt class="reshead"><a name="33" class="resnumhead"></a>33 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5ng</dt>' +
+					'<dd class="resbody">NGID</dd>' +
+					"</dl>");
+				urls[0] = basicUrl + "1-";
+				urls[1] = basicUrl + "31-";
+				urls[2] = basicUrl + "61-";
+				$("#sandbox dl").prepend("<p id='loading'>now loading...</p>");
+				spyOn(urlAnalyzer, "getNowUrl").and.returnValue(basicUrl + "61-");
+				spyOn(urlAnalyzer, "inArticlePage").and.returnValue(false);
+				sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+				sut.isNowLoading = true;
+				sut.endIndex = 1;
+				sut.initSmallBbs();
+			});
+
+			it("appendBbsで、パラメータの中身が#bbs dlの前に追加される", function(){
+				//exercise
+				sut.appendBbs(appendDl);
+				//verify
+				expect($("#bbs dl dt").size()).toEqual(3);
+				var res = $("#bbs dl dt").eq(1);
+				expect(res.html()).toMatch(/\[2\/2\]/);
+				expect(res.hasClass("deleted")).toEqual(true);
+				expect($("#loading").size()).toEqual(0);
+				expect(sut.isNowLoading).toEqual(false);
+				var res2 = $("#bbs dl dt").eq(2);
+				expect(res2.hasClass("deleted")).toEqual(false);
+				expect(res2.find("#contextMenu").size()).toEqual(0);
+				res2.find(".ID").trigger("click");
+				expect(res2.find("#contextMenu").size()).toEqual(1);
+				res2.find("#contextMenu #ngidMenu").trigger("click");
+				expect(res2.hasClass("deleted")).toEqual(true);
+			});
+		});
+
+		describe("scrollLoaderのテスト", function(){
+			var sut;
+			beforeEach(function(){
+				urls[0] = basicUrl + "1-";
+				urls[1] = basicUrl + "31-";
+				urls[2] = basicUrl + "61-";
+				$("#sandbox").append("<div style='height: 1000px;'></div>");
+				$("#sandbox").append("<div id='bbs'><dl id='bbsmain'><dt>a</dt></dl></div>");
+				sut = new c.ManagerToReadBbs(urls);
+				spyOn(sut, "readNextBbs");
+				jasmine.clock().install();
+			});
+
+			afterEach(function(){
+				jasmine.clock().uninstall();
+				$(window).unbind("scroll");
+				$(window).scrollTop(0);
+			});
+
+			it("掲示板が表示されていて、autoLoadフラグが立っている時、スクロールによって掲示板の下が表示されるならreadNextBbsが1回呼び出される", function(){
+				//setUp
+				$("#sandbox").prepend('<li>NicoDicBBSViewer</li><li id="bbsLi" class="selected">' +
+					'<a href="#">掲示板を表示する</a></li><li id="ngLi"><a href="#">設定画面を表示する</a></li>');
+				GM_setValue("autoLoad", true);
+				//exercise
+				sut.scrollLoader();
+				//verify
+				expect(sut.reserved).toEqual(false);
+				$(window).scrollTop(1000);
+				$(window).trigger("scroll");
+				$(window).trigger("scroll");
+				expect(sut.reserved).toEqual(true);
+				jasmine.clock().tick(999);
+				expect(sut.readNextBbs).not.toHaveBeenCalled();
+				jasmine.clock().tick(1);
+				expect(sut.reserved).toEqual(false);
+				expect(sut.readNextBbs.calls.count()).toEqual(1)
+			});
+
+			it("掲示板が表示されていて、autoLoadフラグが立っている時でも、スクロールによって掲示板の下が表示されないならreadNextBbsが呼び出されない", function(){
+				//setUp
+				$("#sandbox").prepend('<li>NicoDicBBSViewer</li><li id="bbsLi" class="selected">' +
+					'<a href="#">掲示板を表示する</a></li><li id="ngLi"><a href="#">設定画面を表示する</a></li>');
+				GM_setValue("autoLoad", true);
+				//exercise
+				sut.scrollLoader();
+				//verify
+				$(window).trigger("scroll");
+				expect(sut.reserved).toEqual(false);
+				jasmine.clock().tick(1000);
+				expect(sut.reserved).toEqual(false);
+				expect(sut.readNextBbs).not.toHaveBeenCalled();
+			});
+
+			it("設定画面が表示されているなら、スクロールしてもreadNextBbsが呼び出されない", function(){
+				//setUp
+				$("#sandbox").prepend('<li>NicoDicBBSViewer</li><li id="bbsLi">' +
+					'<a href="#">掲示板を表示する</a></li><li id="ngLi" class="selected"><a href="#">設定画面を表示する</a></li>');
+				GM_setValue("autoLoad", true);
+				//exercise
+				sut.scrollLoader();
+				//verify
+				$(window).scrollTop(1000);
+				$(window).trigger("scroll");
+				expect(sut.reserved).toEqual(false);
+				jasmine.clock().tick(1000);
+				expect(sut.reserved).toEqual(false);
+				expect(sut.readNextBbs).not.toHaveBeenCalled();
+			});
+
+			it("autoLoadが立っていないなら、スクロールしてもreadNextBbsが呼び出されない", function(){
+				//setUp
+				$("#sandbox").prepend('<li>NicoDicBBSViewer</li><li id="bbsLi" class="selected">' +
+					'<a href="#">掲示板を表示する</a></li><li id="ngLi"><a href="#">設定画面を表示する</a></li>');
+				//exercise
+				sut.scrollLoader();
+				//verify
+				$(window).scrollTop(1000);
+				$(window).trigger("scroll");
+				expect(sut.reserved).toEqual(false);
+				jasmine.clock().tick(1000);
+				expect(sut.reserved).toEqual(false);
+				expect(sut.readNextBbs).not.toHaveBeenCalled();
+			});
+		});
 	});
 
 	describe("MemuOperatorのテスト", function(){
@@ -1646,6 +2107,7 @@ describe("", function(){
 
 		afterEach(function(){
 			$("#sandbox").remove();
+			$("#nicoDicBBSViewerCSS").remove();
 		})
 
 		describe("bindContextMenuのテスト", function(){
@@ -1852,6 +2314,227 @@ describe("", function(){
 				expect($("#contextMenu li").eq(2).attr("id")).toEqual("ngresMenu");
 			});
 		});
+
+		describe("bindMenuのテスト", function(){
+			describe("画面の設定のテスト", function(){
+				beforeEach(function(){
+					$("#sandbox").prepend("<div id='topline' style='height: 36px; position: fixed;><ul id='topbarRightMenu' class='popupRightMenu'>" + 
+						"<li id='topbarLogoutMenu' style='display:none;''><a href='/p/logout'>ログアウト</a></li></ul></div>");
+					$("#bbs").before("<div style='height:500px;'></div>");
+					sut.insertConfigHtml();
+				});
+
+				it("ngLiをクリックすることで設定画面になり、メニューもngLiが選択されている状態になり、高さは設定画面が見える位置にある", function(){
+					//exercise
+					sut.bindMenu();
+					$("#ngLi").trigger("click");
+					//verify
+					expect($("#bbs").css("display")).toEqual("none");
+					expect($("#ng").css("display")).toEqual("block");
+					expect($("#bbsLi").hasClass("selected")).toEqual(false);
+					expect($("#ngLi").hasClass("selected")).toEqual(true);
+					expect($("html").scrollTop()).toBeCloseTo($("#ng").offset().top - $("#topline").height(), -1);
+				});
+
+				it("スクロールをしてからngLiをクリックして、再度スクロールしてbbsLiをクリックすると、掲示板画面になり、メニューもbbsLiが選択されている状態になり、高さは前のスクロール位置になる", function(){
+					//setUp
+					sut.bindMenu();
+					$("html").scrollTop(100);
+					$("#ngLi").trigger("click");
+					$("html").scrollTop(200);
+					//exercise
+					$("#bbsLi").trigger("click");
+					//verify
+					expect($("#ng").css("display")).toEqual("none");
+					expect($("#bbs").css("display")).toEqual("block");
+					expect($("#ngLi").hasClass("selected")).toEqual(false);
+					expect($("#bbsLi").hasClass("selected")).toEqual(true);
+					expect($("html").scrollTop()).toBeCloseTo(100, -1);
+				});
+
+				it("スクロールをしてからngLiをクリックして、再度スクロールしてbackToBbsButtonをクリックすると、掲示板画面になり、メニューもbbsLiが選択されている状態になり、高さは前のスクロール位置になる", function(){
+					//setUp
+					sut.bindMenu();
+					$("html").scrollTop(100);
+					$("#ngLi").trigger("click");
+					$("html").scrollTop(200);
+					//exercise
+					$("#backToBbsButton").trigger("click");
+					//verify
+					expect($("#ng").css("display")).toEqual("none");
+					expect($("#bbs").css("display")).toEqual("block");
+					expect($("#ngLi").hasClass("selected")).toEqual(false);
+					expect($("#bbsLi").hasClass("selected")).toEqual(true);
+					expect($("html").scrollTop()).toBeCloseTo(100, -1);
+				});
+			});
+
+			describe("設定に関するテスト", function(){
+
+				var setFlag = function(ids){
+					for(var i = 0; i < ids.length; i++){
+						GM_setValue(ids[i], true);
+					}
+				};
+
+				var changeCheckboxes = function(ids, checked){
+					for(var i = 0; i < ids.length; i++){
+						$("#" + ids[i] + "Checkbox").attr("checked", checked);
+					}
+				}
+
+				var verifyGM = function(ids, bool){
+					for(var i = 0; i < ids.length; i++){
+						if(bool){
+							expect(GM_getValue(ids[i])).toBeTruthy();
+						}else{
+							expect(GM_getValue(ids[i])).toBeFalsy();
+						}
+					}
+				}
+				/*["autoLoad", "useNG", "seethroughNG", "tooltipOnDicPage", "showIDTooltip", "showResAnchorTooltip", "showResNumberTooltip",
+					"showResHandleTooltip",	"classificationID", "classificationResNumber"]*/
+				beforeEach(function(){
+					setFlag(["autoLoad", "useNG", "seethroughNG", "tooltipOnDicPage", "showIDTooltip"]);
+					GM_setValue("ngid", "ngid");
+					GM_setValue("ngname", "ngname");
+					sut.insertConfigHtml();
+					sut.bindMenu();
+					changeCheckboxes(["autoLoad", "useNG", "seethroughNG"], false);
+					changeCheckboxes(["showResAnchorTooltip", "showResNumberTooltip"], true);
+					$("#ngidTextarea").val("ngid2");
+					$("#ngnameTextarea").val("");
+					$("#ngwordTextarea").val("ngword");
+				});
+
+				it("decideNGをクリックすることで、チェックボックスやテキストエリアがGMに反映され、またNGが反映される", function(){
+					//setUp
+					spyOn(sut.ngOperator, "initNg");
+					spyOn(sut.ngOperator, "applyNg");
+					//exercise
+					$("#decideNG").trigger("click");
+					//verify
+					verifyGM(["tooltipOnDicPage", "showIDTooltip", "showResAnchorTooltip", "showResNumberTooltip"], true);
+					verifyGM(["autoLoad", "useNG", "seethroughNG", "showResHandleTooltip",	"classificationID", "classificationResNumber"], false);
+					expect(GM_getValue("ngid")).toEqual("ngid2");
+					expect(GM_getValue("ngname")).toBeFalsy();
+					expect(GM_getValue("ngword")).toEqual("ngword");
+					expect(GM_getValue("ngres")).toBeFalsy();
+					expect(sut.ngOperator.initNg).toHaveBeenCalled();
+					expect(sut.ngOperator.applyNg).toHaveBeenCalledWith(list.resList);
+				});
+
+				it("cancelNGをクリックすることで、チェックボックkスやテキストエリアがGMの状態に戻る", function(){
+					//exercise
+					$("#cancelNG").trigger("click");
+					//verify
+					verifyGM(["autoLoad", "useNG", "seethroughNG", "tooltipOnDicPage", "showIDTooltip"], true);
+					verifyGM(["showResAnchorTooltip", "showResNumberTooltip", "showResHandleTooltip", "classificationID", "classificationResNumber"], false);
+					expect(GM_getValue("ngid")).toEqual("ngid");
+					expect(GM_getValue("ngname")).toEqual("ngname");
+					expect(GM_getValue("ngword")).toBeFalsy();
+					expect(GM_getValue("ngres")).toBeFalsy();
+				});
+			});
+		});
+	});
+
+	describe("mainのテスト", function(){
+		var addHead;
+		var htmlHead;
+		var htmlTail;
+		var barHtml;
+		var basicUrl;
+		var htmls;
+		var urlAnalyzer;
+		beforeEach(function(){
+			addHead = '<link id="defCss" rel="stylesheet" type="text/css" href="/nd0.css?1404070300">';
+			$("head").append(addHead);
+			basicUrl = "http://dic.nicovideo.jp/b/a/hoge/";
+			htmlHead = "<html><head></head><body>";
+			htmlTail = "</body></html>";
+			barHtml = '<div id="topline"><ul id="topbarRightMenu"><li id="topbarLogoutMenu" style="display:none;"><a href="/p/logout">ログアウト</a></li></ul></div>';
+			var pager = '<div class="pager"><a href="/a/hoge" class="navi">-hogeの記事に戻る</a><a href="' + basicUrl + '1-" class="navi">&#171; 前へ</a>' +
+						'<a href="' + basicUrl + '1-">1-</a><span class="current">31-</span><a href="' + basicUrl + '61-">61-</a>' +
+						'<a href="' + basicUrl + '91-">91-</a><a href="' + basicUrl + '61-" class="navi">次へ &#187;</a></div>';
+			var mainHtmls = [];
+			urlAnalyzer = new c.UrlAnalyzer();
+			spyOn(urlAnalyzer, "getNowUrl").and.returnValue(basicUrl + "31-");
+			spyOn(urlAnalyzer, "inArticlePage").and.returnValue(false);
+			mainHtmls[basicUrl + "1-"] = "<dl>" +
+				'<dt class="reshead"><a name="31" class="resnumhead"></a>31 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5ng</dt>' +
+				'<dd class="resbody">NGID</dd></dl>';
+			mainHtmls[basicUrl + "31-"] = "<dl>" +
+				'<dt class="reshead"><a name="32" class="resnumhead"></a>32 ： <span class="name">NGネーム</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
+				'<dd class="resbody">NGネーム</dd></dl>';
+			mainHtmls[basicUrl + "61-"] = "<dl>" +
+				'<dt class="reshead"><a name="33" class="resnumhead"></a>33 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
+				'<dd class="resbody">NGワード</dd></dl>';
+			mainHtmls[basicUrl + "91-"] = "<dl>" +
+				'<dt class="reshead"><a name="34" class="resnumhead"></a>34 ： <span class="name">31</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
+				'<dd class="resbody">NGレス</dd></dl>';
+			htmls = [];
+			for(url in mainHtmls){
+				htmls[url] = htmlHead + barHtml + "<div id='bbs'>" + pager + mainHtmls[url] + pager + "</div>" + htmlTail;
+			}
+			$("body").append("<div id='sandbox'></div>");
+			$("#sandbox").append(barHtml + "<div id='bbs'>" + pager + mainHtmls[basicUrl + "31-"] + pager + "</div>");
+			jasmine.clock().install();
+			spyOn($, "get").and.callFake(function(url, callback){
+				console.log(url);
+				callback(htmls[url]);
+			});
+		});
+	
+		it("一連の動作が動く", function(){
+			//exercise
+			c.main(urlAnalyzer);
+			//verify
+			var id = $("#bbs dl dt div");
+			expect(id.hasClass("ID")).toEqual(true);
+			id.trigger("mouseenter");
+			expect(id.find("dt").size()).toEqual(1);
+			id.trigger("mouseleave");
+			id.trigger("click");
+			expect($("#bbs dl dt #contextMenu").size()).toEqual(1);
+			expect($("#bbs dl dt").hasClass("deleted")).toEqual(false);
+			$("#bbs dl dt #contextMenu #ngidMenu").trigger("click");
+			expect($("#bbs dl dt").hasClass("deleted")).toEqual(true);
+			expect($("#loading").size()).toEqual(0);
+			expect($(".pager #loadPreviousPageLinks").size()).toEqual(1);
+			expect($("#loadPreviousPageLinks").size()).toEqual(1);
+			$(".pager #loadPreviousPageLinks").trigger("click");
+			expect($("#bbs dl dt").size()).toEqual(2);
+			expect($("#loadPreviousPageLinks").size()).toEqual(0);
+			expect($("#loadNextPageLinks").size()).toEqual(1);
+			$(".pager #loadNextPageLinks").trigger("click");
+			expect($("#bbs dl dt").size()).toEqual(3);
+			$(window).scrollTop(1000);
+			$(window).trigger("scroll");
+			expect($("#bbs dl dt").size()).toEqual(3);
+			jasmine.clock().tick(1000);
+			expect($("#bbs dl dt").size()).toEqual(4);
+			expect($("#bbs dl dt").eq(1).html()).toMatch(/\[1\/3\]/);
+			expect($("#bbs dl dt").eq(1).find("div").hasClass("IDMulti")).toEqual(true);
+			expect($("#loadNextPageLinks").size()).toEqual(0);
+			expect($("#bbs dl dt.deleted").size()).toEqual(3);
+			expect($("#bbs").css("display")).toEqual("block");
+			expect($("#ng").css("display")).toEqual("none");
+			expect($("#topbarRightMenu #bbsLi").hasClass("selected")).toEqual(true);
+			expect($("#topbarRightMenu #ngLi").hasClass("selected")).toEqual(false);
+			$("#topbarRightMenu #ngLi").trigger("click");
+			expect($("#bbs").css("display")).toEqual("none");
+			expect($("#ng").css("display")).toEqual("block");
+			expect($("#topbarRightMenu #bbsLi").hasClass("selected")).toEqual(false);
+			expect($("#topbarRightMenu #ngLi").hasClass("selected")).toEqual(true);
+			$("#ngidTextarea").val("");
+			$("#decideNG").trigger("click");
+			expect($("#bbs dl dt.deleted").size()).toEqual(0);
+			//tearDown
+			$("#sandbox").remove();
+			$("#defCss").remove();
+			$("#nicoDicBBSViewerCSS").remove();
+			jasmine.clock().uninstall();
+		});
 	});
 });
-

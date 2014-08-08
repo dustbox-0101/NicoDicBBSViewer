@@ -81,8 +81,13 @@ var net_threeaster_NicoDicBBSViewer = {};
 	}
 
 	//-----ResCollection-----
-	function ResCollection(){
-		this.urlAnalyzer = new UrlAnalyzer();
+	function ResCollection(ana){
+		if(ana === undefined){
+			this.urlAnalyzer = new UrlAnalyzer();
+		}else{
+			this.urlAnalyzer = ana;
+		}
+		
 	}
 
 	ResCollection.prototype.createResList =  function(dl){
@@ -99,7 +104,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 		var resbodies = dl.find("dd");
 		this.resList = new Array(resheads.size());
 		for(var i = 0; i < resheads.size(); i++){
-			this.resList[i] = new Res(resheads.eq(i), resbodies.eq(i));
+			this.resList[i] = new Res(resheads.eq(i), resbodies.eq(i), this.urlAnalyzer);
 		}
 	};
 
@@ -175,10 +180,15 @@ var net_threeaster_NicoDicBBSViewer = {};
 
 	//-----Res-----
 
-	function Res(reshead, resbody){
+	function Res(reshead, resbody, ana){
 		this.reshead = reshead;
 		this.resbody = resbody;
-		this.urlAnalyzer = new UrlAnalyzer();
+		if(ana === undefined){
+			this.urlAnalyzer = new UrlAnalyzer();
+		}else{
+			this.urlAnalyzer = ana;
+		}
+		
 	};
 
 	Res.prototype.backupRes = function(){
@@ -309,7 +319,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 				num[i] = num[i] - 0;
 			}
 			//self.attr("href", "#r" + num[0]);
-			self.attr("href", "#" + num[0]);
+			//self.attr("href", "#" + num[0]);
 			self.removeAttr("target");
 			self.wrap("<span class='numTooltip'></span>").parent().unbind("mouseenter").unbind("mouseleave").hover(function(){
 				var self = $(this);
@@ -404,13 +414,17 @@ var net_threeaster_NicoDicBBSViewer = {};
 	};
 
 	//-----NgOperator-----
-	function NgOperator(){
+	function NgOperator(ana){
 		this.ngList = {};
 		this.ngList.ngid = [];
 		this.ngList.ngname = [];
 		this.ngList.ngword = [];
 		this.ngList.ngres = [];
-		this.urlAnalyzer = new UrlAnalyzer();
+		if(ana === undefined){
+			this.urlAnalyzer = new UrlAnalyzer();
+		}else{
+			this.urlAnalyzer = ana;
+		}
 	}
 	NgOperator.prototype.initNg = function(){
 		this.ngList = {};
@@ -513,6 +527,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 		this.resCollection = resCollection;
 		this.ngOperator = ngOperator;
 		this.urlAnalyzer = new UrlAnalyzer();
+		this.bbsScroll = 0;
 	};
 
 
@@ -624,16 +639,17 @@ var net_threeaster_NicoDicBBSViewer = {};
 	};
 
 	MenuOperator.prototype.bindMenu = function(){
+		var self = this;
 		var contents = $("#bbs, #ng");
 		var backBBS = function(){
 			if($(".selected").attr("id") === "bbsLi"){
-				bbsScroll = $("html").scrollTop();
+				self.bbsScroll = $("html").scrollTop();
 			}
 			$(".selected").removeClass("selected");
 			$("#bbsLi").addClass("selected");
 			contents.not("#bbs").css("display", "none");
 			$("#bbs").css("display", "block");
-			$("html").scrollTop(bbsScroll);
+			$("html").scrollTop(self.bbsScroll);
 			return false;
 		};
 		$("#bbsLi").click(backBBS);
@@ -641,11 +657,11 @@ var net_threeaster_NicoDicBBSViewer = {};
 
 		$("#ngLi").click(function(){
 			if($(".selected").attr("id") === "bbsLi"){
-				bbsScroll = $("html").scrollTop();
+				self.bbsScroll = $("html").scrollTop();
 			}
 			$(".selected").removeClass("selected");
 			$(this).addClass("selected");
-			contents.not("#ngid").css("display", "none");
+			contents.not("#ng").css("display", "none");
 			$("#ng").css("display", "block");
 			$("html").scrollTop($("#ng").offset().top - $("#topline").height());
 			return false;
@@ -680,15 +696,15 @@ var net_threeaster_NicoDicBBSViewer = {};
 			setcbConfig("classificationID");
 			setcbConfig("classificationResNumber");
 			setcbConfig("switcherInTopMenu");
-			initNg();
-			applyNg();
+			self.ngOperator.initNg();
+			self.ngOperator.applyNg(self.resCollection.resList);
 		});
 		
 		$("#cancelNG").click(function(){
-			$("#ngidTextarea").val(nglist.ngidText ? nglist.ngidText : "");
-			$("#ngnameTextarea").val(nglist.ngnameText ? nglist.ngnameText : "");
-			$("#ngwordTextarea").val(nglist.ngwordText ? nglist.ngwordText : "");
-			$("#ngresTextarea").val(nglist.ngresText ? nglist.ngresText : "");
+			$("#ngidTextarea").val(GM_getValue("ngid") ? GM_getValue("ngid") : "");
+			$("#ngnameTextarea").val(GM_getValue("ngname") ? GM_getValue("ngname") : "");
+			$("#ngwordTextarea").val(GM_getValue("ngword") ? GM_getValue("ngword") : "");
+			$("#ngresTextarea").val(GM_getValue("ngres") ? GM_getValue("ngres") : "");
 			checkcbConfig("seethroughNG");
 			checkcbConfig("loadAll");
 			checkcbConfig("autoLoad");
@@ -713,132 +729,143 @@ var net_threeaster_NicoDicBBSViewer = {};
 		this.urlAnalyzer = ana;
 		this.bbsUrls = urls;
 		var nowUrl = ana.getNowUrl();
-		if(nowUrl.indexOf("#") === -1){
-			this.startIndex = urls.indexOf(nowUrl);
-		}else{
-			var mainurl = nowUrl.substring(0, nowUrl.indexOf("#"));
-			if(mainurl.indexOf("-") === -1){
-				mainurl = mainurl + "-";
+		if(!ana.inArticlePage()){
+			if(nowUrl.indexOf("#") === -1){
+				this.startIndex = urls.indexOf(nowUrl);
+			}else{
+				var mainurl = nowUrl.substring(0, nowUrl.indexOf("#"));
+				if(mainurl.indexOf("-") === -1){
+					mainurl = mainurl + "-";
+				}
+				this.startIndex = urls.indexOf(mainurl);
 			}
-			this.startIndex = urls.indexOf(mainurl);
 		}
 		this.endIndex = this.startIndex;
 		this.isNowLoading = false;
+		this.resCollection = new ResCollection(ana);
+		this.ngOperator = new NgOperator(ana);
+		this.menuOperator = new MenuOperator(this.resCollection, this.ngOperator);
 	};
 
 	ManagerToReadBbs.prototype.readPreviousBbs = function(){
-		if(manager.isNowLoading || manager.startIndex <= 0){
+		if(this.isNowLoading || this.startIndex <= 0){
 			return;
 		}
-		manager.isNowLoading = true;
-		manager.startIndex--;
-		$.get(manager.bbsUrls[manager.startIndex], function(r){
-			prependBbs($(r).find("dl"));
+		$("#bbsmain").prepend("<p id='loading'>now loading...</p>");
+		this.isNowLoading = true;
+		this.startIndex--;
+		var self = this;
+		$.get(this.bbsUrls[this.startIndex], function(r){
+			self.prependBbs($(r).find("dl"));
 		});
-		if(manager.startIndex === 0){
+		if(this.startIndex === 0){
 			$("#loadPreviousPageLinks").remove();
 		}
-		$("#bbsmain").prepend("<p id='loading'>now loading...</p>")
 		return false;
 	};
 
-	var prependBbs = function(dl){
-		revivalAllRes();
-		parent.find("dl").prepend(dl.contents());
-		createResList(parent.find("dl"));
-		createResListById();
-		makeTooltips();
-		setContextMenu();
-		for(var i = 0; i < responds.res.length; i++){
-			responds.res[i].backupRes();
+	ManagerToReadBbs.prototype.prependBbs = function(dl){
+		this.resCollection.revivalAllRes();
+		$("#bbs dl").prepend(dl.contents());
+		this.resCollection.createResList($("#bbs dl"));
+		this.resCollection.createResListById();
+		this.resCollection.makeTooltips();
+		this.resCollection.setContextMenu();
+		var resList = this.resCollection.resList;
+		for(var i = 0; i < resList.length; i++){
+			resList[i].backupRes();
 		}
-		applyNg();
+		this.ngOperator.applyNg(resList);
 		$("#loading").remove();
-		manager.isNowLoading = false;
+		this.isNowLoading = false;
 	};
 
 	ManagerToReadBbs.prototype.readNextBbs = function(){
-		if(manager.isNowLoading || manager.endIndex >= manager.bbsUrls.length - 1){
+		if(this.isNowLoading || this.endIndex >= this.bbsUrls.length - 1){
 			return;
 		}
-		manager.isNowLoading = true;
-		manager.endIndex++;
-		$.get(manager.bbsUrls[manager.endIndex], function(r){
-			nextBbs($(r).find("dl"));
+		$("#bbsmain").append("<p id='loading'>now loading...</p>");
+		this.isNowLoading = true;
+		this.endIndex++;
+		var self = this;
+		$.get(this.bbsUrls[this.endIndex], function(r){
+			self.appendBbs($(r).find("dl"));
 		});
-		if(manager.endIndex === manager.bbsUrls.length - 1){
+		if(this.endIndex === this.bbsUrls.length - 1){
 			$("#loadNextPageLinks").remove();
 		}
-		$("#bbsmain").append("<p id='loading'>now loading...</p>");
 		return false;
 	};
 
-	var nextBbs = function(dl){
-		revivalAllRes();
-		parent.find("dl").append(dl.contents());
-		createResList(parent.find("dl"));
-		createResListById();
-		makeTooltips();
-		setContextMenu();
-		for(var i = 0; i < responds.res.length; i++){
-			responds.res[i].backupRes();
+	ManagerToReadBbs.prototype.appendBbs = function(dl){
+		this.resCollection.revivalAllRes();
+		$("#bbs dl").append(dl.contents());
+		this.resCollection.createResList($("#bbs dl"));
+		this.resCollection.createResListById();
+		this.resCollection.makeTooltips();
+		this.resCollection.setContextMenu();
+		var resList = this.resCollection.resList;
+		for(var i = 0; i < resList.length; i++){
+			resList[i].backupRes();
 		}
-		applyNg();
+		this.ngOperator.applyNg(resList);
 		$("#loading").remove();
-		manager.isNowLoading = false;
+		this.isNowLoading = false;
 	};
 
-	var initSmallBbs = function(){
-		createResList(parent.find("dl"));
-		if(document.URL.indexOf("http://dic.nicovideo.jp/b/") !== -1 || GM_getValue("tooltipOnDicPage")){
-			createResListById();
-			makeTooltips();
-		}else{
-			//makeIDDiv();
+	ManagerToReadBbs.prototype.initSmallBbs = function(){
+		this.initPager();
+		this.resCollection.createResList($("#bbs dl"));
+		this.resCollection.createResListById();
+		this.resCollection.makeTooltips();
+		var resList = this.resCollection.resList;
+		for(var i = 0; i < resList.length; i++){
+			resList[i].backupRes();
 		}
-		for(var i = 0; i < responds.res.length; i++){
-			responds.res[i].backupRes();
-		}
-		setMenu();
-		setContextMenu();
-		bindContextMenu();
-		initNg();
-		applyNg();
+		this.menuOperator.insertConfigHtml();
+		this.menuOperator.bindMenu();
+		this.resCollection.setContextMenu();
+		this.menuOperator.bindContextMenu();
+		this.ngOperator.initNg();
+		this.ngOperator.applyNg(this.resCollection.resList);
 	};
 
 	ManagerToReadBbs.prototype.initPager = function(){
 		var pager = $("#bbs .pager");
+		var self = this;
 		if(this.urlAnalyzer.inArticlePage()){
 			pager.find(".navi").remove();
 		}else{
 			pager.eq(0).find("a:not(:first), .current, span").remove();
 			if(this.startIndex > 0){
 				pager.eq(0).append("<a id='loadPreviousPageLinks' href='#'>前へ</a>");
-				pager.find("#loadPreviousPageLinks").click(this.readPreviousBbs);
+				pager.find("#loadPreviousPageLinks").click(function(){self.readPreviousBbs();});
 			}
 			pager.eq(1).find("a:not(:first), .current, span").remove();
 			if(this.endIndex < this.bbsUrls.length - 1){
 				pager.eq(1).append("<a id='loadNextPageLinks' href='#'>次へ</a>");
-				pager.find("#loadNextPageLinks").click(this.readNextBbs);
+				pager.find("#loadNextPageLinks").click(function(){self.readNextBbs();});
 			}
 		}
 	};
 
-	var scrollLoader = function(){
-		var reserved = false;
+	ManagerToReadBbs.prototype.scrollLoader = function(){
+		this.reserved = false;
+		var self = this;
 		setInterval(function(){
-			if(reserved){
-				reserved = false;
-				readNextBbs();
+			if(self.reserved){
+				self.reserved = false;
+				self.readNextBbs();
 			}
 		}, 1000);
-			$(window).scroll(function(){
+		$(window).scroll(function(){
 			if($(".selected").attr("id") === "bbsLi" && GM_getValue("autoLoad") && $("html").scrollTop() + $(window).height() > $("#bbsmain").position().top + $("#bbsmain").height()){
-				reserved = true;
+				self.reserved = true;
 			}
 		});
 	};
 
+	//-----単体の関数-----
 
 	var removeUselessLines = function(s){
 		if(!s){
@@ -887,7 +914,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 		var styleTag = "<style id='nicoDicBBSViewerCSS' type='text/css'>" + idStyle + numberStyle + insideTooltipStyle + onMouseIdStyle + defaultTooltipStyle + 
 			onMouseTooltipStyle + leftboxStyle + ngStyle + hideMenu + sidemenu + contextMenuStyle + contextItemStyle + "</style>";
 
-		$("link").eq(1).after($(styleTag));
+		$("link").last().after($(styleTag));
 	};
 
 	var counterAutopagerize = function(){
@@ -897,17 +924,23 @@ var net_threeaster_NicoDicBBSViewer = {};
 	};
 
 //以下main
-	var main = function(){
+	var main = function(ana){
 		initConfig(["useNG", "autoLoad", "tooltipOnDicPage", "showIDTooltip", "showResAnchorTooltip", "showResNumberTooltip", "showResHandleTooltip", 
 					"classificationID", "classificationResNumber"]);
 		insertStyle();
-		var parent = $("#bbs");
-		parent.find("dl").attr("id", "bbsmain");
-		var bbsScroll = 0;
-		var pager = parent.find(".pager");
-		var nglist = initNg();
+		$("#bbs dl").attr("id", "bbsmain");
 		$(".border").remove();
-		var urlAnalyzer = new UrlAnalyzer();
+		if(ana === undefined){
+			var urlAnalyzer = new UrlAnalyzer();
+		}else{
+			var urlAnalyzer = ana;
+		}
+		
+		var manager = new ManagerToReadBbs(urlAnalyzer.getBBSURLs($("#bbs .pager").eq(0)), urlAnalyzer);
+		manager.initSmallBbs();
+		counterAutopagerize();
+		manager.scrollLoader();
+		/*
 		if(urlAnalyzer.inArticlePage()){
 			initPager();
 			initSmallBbs();
@@ -918,20 +951,21 @@ var net_threeaster_NicoDicBBSViewer = {};
 			initSmallBbs();
 			scrollLoader();
 		}
+		*/
 	};
-	//main();
 	//-----test用-----
 	var c = net_threeaster_NicoDicBBSViewer;
 	c.removeUselessLines = removeUselessLines;
 	c.Res = Res;
 	c.ManagerToReadBbs = ManagerToReadBbs;
-	c.prependBbs = prependBbs;
-	c.nextBbs = nextBbs;
-	c.initSmallBbs = initSmallBbs;
 	c.initConfig = initConfig;
 	c.insertStyle = insertStyle;
 	c.UrlAnalyzer = UrlAnalyzer;
 	c.ResCollection = ResCollection;
 	c.NgOperator = NgOperator;
 	c.MenuOperator = MenuOperator;
+	c.main = main;
+
+	//-----main実行/テスト時には途中で止まる-----
+	main();
 })(jQuery);
