@@ -11,7 +11,7 @@
 // @require http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js
 // @grant GM_getValue
 // @grant GM_setValue
-// @version 0.0.1.20140609045517
+// @version 1.1.0
 // ==/UserScript==
 $.noConflict();
 var net_threeaster_NicoDicBBSViewer = {};
@@ -78,6 +78,22 @@ var net_threeaster_NicoDicBBSViewer = {};
 
 	UrlAnalyzer.prototype.getNowPageName = function(){
 		return this.getPageName(this.getNowUrl());
+	}
+
+	UrlAnalyzer.prototype.changeNumber = function(url){
+		if(this.inArticlePage()){
+			return url;
+		}else{
+			var parts = url.split("/");
+			var last = parts.pop();
+			var lastParts = last.split("-");
+			var lastNum = lastParts.shift();
+			var lastTail = lastParts.join("-");
+			var base = parts.join("/");
+			var nowNum = this.getNowUrl().split("/").pop().split("-")[0];
+			var newUrl = base + "/" + nowNum + "-" + lastTail;
+			return newUrl;
+		}
 	}
 
 	//-----ResCollection-----
@@ -268,7 +284,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 			}
 			for(var j = 0; j < numberAnchors.length; j++){
 				var num = numberAnchors[j];
-				if(num.indexOf("-") === -1 && myNumber == num){
+				if(num.indexOf("-") === -1 && myNumber === num - 0){
 					this.linkedResponds.push(resList[i]);
 					break;
 				}else if(num.indexOf("-") !== -1){
@@ -312,15 +328,13 @@ var net_threeaster_NicoDicBBSViewer = {};
 
 	Res.prototype.makeNumTooltip = function(resListByNumber){
 		var that = this;
+		this.resbody.find(".numTooltip > a.dic").unwrap(); 
 		this.resbody.find("a.dic").filter(function(){return $(this).html().indexOf("&gt;&gt;") !== -1}).each(function(){
 			var self = $(this);
 			var num = self.html().split("&gt;").join("").split("-");
 			for(var i = 0; i < num.length; i++){
 				num[i] = num[i] - 0;
 			}
-			//self.attr("href", "#r" + num[0]);
-			//self.attr("href", "#" + num[0]);
-			self.removeAttr("target");
 			self.wrap("<span class='numTooltip'></span>").parent().unbind("mouseenter").unbind("mouseleave").hover(function(){
 				var self = $(this);
 				var tooltip = $("<div></div>");
@@ -329,16 +343,20 @@ var net_threeaster_NicoDicBBSViewer = {};
 					if(res === undefined){
 						return;
 					}
+					var cloneBody = res.resbody.clone();
+					cloneBody.find(".numTooltip > a.dic").unwrap();
 					tooltip.append(res.reshead.clone().find("a").removeAttr("id").end());
-					tooltip.append(res.resbody.clone().find("a").removeAttr("id").end());
+					tooltip.append(cloneBody.find("a").removeAttr("id").end());
 				}else{
 					for(var i = num[0]; i <= num[1]; i++){
 						var res = resListByNumber[i];
 						if(res === undefined){
 							continue;
 						}
+						var cloneBody = res.resbody.clone();
+						cloneBody.find(".numTooltip > a.dic").unwrap();
 						tooltip.append(res.reshead.clone().find("a").removeAttr("id").end());
-						tooltip.append(res.resbody.clone().find("a").removeAttr("id").end());
+						tooltip.append(cloneBody.find("a").removeAttr("id").end());
 					}
 					if(tooltip.html() === $("<div></div>").html()){
 						return;
@@ -411,6 +429,14 @@ var net_threeaster_NicoDicBBSViewer = {};
 			tooltip.offset({top : a});
 			tooltip.height(c - $("#topline").height());
 		}
+	};
+
+	Res.prototype.changeLink = function(){
+		this.resbody.find("a.dic").removeAttr("target");
+		var self = this;
+		this.resbody.find("a.dic").each(function(){
+			$(this).attr("href", self.urlAnalyzer.changeNumber($(this).attr("href")));
+		});
 	};
 
 	//-----NgOperator-----
@@ -761,21 +787,12 @@ var net_threeaster_NicoDicBBSViewer = {};
 		if(this.startIndex === 0){
 			$("#loadPreviousPageLinks").remove();
 		}
-		return false;
 	};
 
 	ManagerToReadBbs.prototype.prependBbs = function(dl){
 		this.resCollection.revivalAllRes();
 		$("#bbs dl").prepend(dl.contents());
-		this.resCollection.createResList($("#bbs dl"));
-		this.resCollection.createResListById();
-		this.resCollection.makeTooltips();
-		this.resCollection.setContextMenu();
-		var resList = this.resCollection.resList;
-		for(var i = 0; i < resList.length; i++){
-			resList[i].backupRes();
-		}
-		this.ngOperator.applyNg(resList);
+		this.createAndSetResList();
 		$("#loading").remove();
 		this.isNowLoading = false;
 	};
@@ -794,40 +811,23 @@ var net_threeaster_NicoDicBBSViewer = {};
 		if(this.endIndex === this.bbsUrls.length - 1){
 			$("#loadNextPageLinks").remove();
 		}
-		return false;
 	};
 
 	ManagerToReadBbs.prototype.appendBbs = function(dl){
 		this.resCollection.revivalAllRes();
 		$("#bbs dl").append(dl.contents());
-		this.resCollection.createResList($("#bbs dl"));
-		this.resCollection.createResListById();
-		this.resCollection.makeTooltips();
-		this.resCollection.setContextMenu();
-		var resList = this.resCollection.resList;
-		for(var i = 0; i < resList.length; i++){
-			resList[i].backupRes();
-		}
-		this.ngOperator.applyNg(resList);
+		this.createAndSetResList();
 		$("#loading").remove();
 		this.isNowLoading = false;
 	};
 
 	ManagerToReadBbs.prototype.initSmallBbs = function(){
 		this.initPager();
-		this.resCollection.createResList($("#bbs dl"));
-		this.resCollection.createResListById();
-		this.resCollection.makeTooltips();
-		var resList = this.resCollection.resList;
-		for(var i = 0; i < resList.length; i++){
-			resList[i].backupRes();
-		}
+		this.ngOperator.initNg();
+		this.createAndSetResList();
 		this.menuOperator.insertConfigHtml();
 		this.menuOperator.bindMenu();
-		this.resCollection.setContextMenu();
 		this.menuOperator.bindContextMenu();
-		this.ngOperator.initNg();
-		this.ngOperator.applyNg(this.resCollection.resList);
 	};
 
 	ManagerToReadBbs.prototype.initPager = function(){
@@ -839,12 +839,12 @@ var net_threeaster_NicoDicBBSViewer = {};
 			pager.eq(0).find("a:not(:first), .current, span").remove();
 			if(this.startIndex > 0){
 				pager.eq(0).append("<a id='loadPreviousPageLinks' href='#'>前へ</a>");
-				pager.find("#loadPreviousPageLinks").click(function(){self.readPreviousBbs();});
+				pager.find("#loadPreviousPageLinks").click(function(){self.readPreviousBbs(); return false;});
 			}
 			pager.eq(1).find("a:not(:first), .current, span").remove();
 			if(this.endIndex < this.bbsUrls.length - 1){
 				pager.eq(1).append("<a id='loadNextPageLinks' href='#'>次へ</a>");
-				pager.find("#loadNextPageLinks").click(function(){self.readNextBbs();});
+				pager.find("#loadNextPageLinks").click(function(){self.readNextBbs(); return false;});
 			}
 		}
 	};
@@ -863,6 +863,20 @@ var net_threeaster_NicoDicBBSViewer = {};
 				self.reserved = true;
 			}
 		});
+	};
+
+	ManagerToReadBbs.prototype.createAndSetResList = function(){
+		this.resCollection.createResList($("#bbs dl"));
+		this.resCollection.createResListById();
+		this.resCollection.createResListByNumber();
+		this.resCollection.makeTooltips();
+		this.resCollection.setContextMenu();
+		var resList = this.resCollection.resList;
+		for(var i = 0; i < resList.length; i++){
+			resList[i].changeLink();
+			resList[i].backupRes();
+		}
+		this.ngOperator.applyNg(resList);
 	};
 
 	//-----単体の関数-----
@@ -939,19 +953,9 @@ var net_threeaster_NicoDicBBSViewer = {};
 		var manager = new ManagerToReadBbs(urlAnalyzer.getBBSURLs($("#bbs .pager").eq(0)), urlAnalyzer);
 		manager.initSmallBbs();
 		counterAutopagerize();
-		manager.scrollLoader();
-		/*
-		if(urlAnalyzer.inArticlePage()){
-			initPager();
-			initSmallBbs();
-		}else{
-			var manager = new ManagerToReadBbs(urlAnalyzer.getBBSURLs(pager.eq(0)));
-			counterAutopagerize();
-			initPager();
-			initSmallBbs();
-			scrollLoader();
+		if(!urlAnalyzer.inArticlePage()){
+			manager.scrollLoader();
 		}
-		*/
 	};
 	//-----test用-----
 	var c = net_threeaster_NicoDicBBSViewer;

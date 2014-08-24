@@ -380,6 +380,33 @@ describe("", function(){
 				expect(actual).toEqual("res");
 			});
 		});
+
+		describe("changeNumberのテスト", function(){
+			var sut;;
+			beforeEach(function(){
+				sut = new c.UrlAnalyzer();
+			})
+
+			it("記事ページでは引数をそのまま返す", function(){
+				//setUp
+				var now = "http://dic.nicovideo.jp/a/res";
+				spyOn(sut, "getNowUrl").and.returnValue(now);
+				//exercise
+				var actual = sut.changeNumber(now);
+				//verify
+				expect(actual).toEqual(now);
+			});
+
+			it("掲示板ページでは番号が現在のものに変更されて戻ってくる", function(){
+				//setUP
+				var nowParts = "http://dic.nicovideo.jp/b/a/res/";
+				spyOn(sut, "getNowUrl").and.returnValue(nowParts + "1-");
+				//exercise
+				var actual = sut.changeNumber(nowParts + "31-#31");
+				//verify
+				expect(actual).toEqual(nowParts + "1-#31");
+			});
+		});
 	});
 
 	describe("ResCollectionのテスト", function(){
@@ -1106,6 +1133,8 @@ describe("", function(){
 				resbody[1] = '<dd class="resbody"><a href="/b/a/name/31-#31" rel="nofollow" target="_blank" class="dic">&gt;&gt;31</a></dd>';
 				reshead[2] = '<dt class="reshead"><a name="33" class="resnumhead"></a>33 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
 				resbody[2] = '<dd class="resbody"><a href="/b/a/name/31-#31" rel="nofollow" target="_blank" class="dic">&gt;&gt;31-32</a></dd>';
+				reshead[3] = '<dt class="reshead"><a name="34" class="resnumhead"></a>34 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>';
+				resbody[3] = '<dd class="resbody"><a href="/b/a/name/31-#34" rel="nofollow" target="_blank" class="dic">&gt;&gt;34</a></dd>';
 				var html = constructDl(reshead, resbody);
 				list = new c.ResCollection();
 				list.createResList($(html));
@@ -1152,6 +1181,16 @@ describe("", function(){
 				expect(res[2].resbody.find("span.numTooltip div .reshead").size()).toEqual(2);
 				//tearDown
 				res[2].resbody.find("a.dic").trigger("mouseleave");
+			});
+
+			it("createResList後makeNumTooltipをすると、自分へのレスにmouseenterすることで自分のレスがツールチップで出る", function(){
+				//exercise
+				res[3].resbody.find("a.dic").trigger("mouseenter");
+				//verify
+				expect(res[3].resbody.find("span.numTooltip div").size()).toEqual(1);
+				expect(res[3].resbody.find("span.numTooltip div .reshead").size()).toEqual(1);
+				//tearDown
+				res[3].resbody.find("a.dic").trigger("mouseleave");
 			});
 		});
 
@@ -1229,6 +1268,50 @@ describe("", function(){
 				//verify
 				expect(r.trueReshead.html()).toEqual(headHtml);
 				expect(r.trueResbody.html()).toEqual(bodyHtml);
+			});
+		});
+
+		describe("changeLinkのテスト", function(){
+			var reshead;
+			var resbody;
+			var urlAnalyzer;
+			beforeEach(function(){
+				reshead = $('<dt class="reshead"><a name="32" class="resnumhead"></a>32 ： <span class="name">NGネーム</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>');
+				resbody = $('<dd class="resbody"><a href="/b/a/name/31-#32" rel="nofollow" target="_blank" class="dic">&gt;&gt;32</a></dd>');
+				urlAnalyzer = new c.UrlAnalyzer();
+			});
+
+			it("記事ページではリンク先を変更せず、同じタブで飛ぶようにする", function(){
+				//setUp
+				spyOn(urlAnalyzer, "getNowUrl").and.returnValue("http://dic.nicovideo.jp/a/name");
+				var sut = new c.Res(reshead, resbody, urlAnalyzer);
+				//exercise
+				sut.changeLink();
+				//verify
+				expect(resbody.find("a.dic").attr("href")).toMatch(/\/b\/a\/name\/31-#32/);
+				expect(resbody.find("a.dic").attr("target")).toBeUndefined();
+			});
+
+			it("掲示板ページでリンク先と同じページの時、リンク先を変更せず、同じタブで飛ぶようにする", function(){
+				//setUp
+				spyOn(urlAnalyzer, "getNowUrl").and.returnValue("http://dic.nicovideo.jp/b/a/name/31-");
+				var sut = new c.Res(reshead, resbody, urlAnalyzer);
+				//exercise
+				sut.changeLink();
+				//verify
+				expect(resbody.find("a.dic").attr("href")).toMatch(/\/b\/a\/name\/31-#32/);
+				expect(resbody.find("a.dic").attr("target")).toBeUndefined();
+			});
+
+			it("掲示板ページでリンク先と違うページの時、現在のページにリンク先を変更して、同じタブで飛ぶようにする", function(){
+				//setUp
+				spyOn(urlAnalyzer, "getNowUrl").and.returnValue("http://dic.nicovideo.jp/b/a/name/1-");
+				var sut = new c.Res(reshead, resbody, urlAnalyzer);
+				//exercise
+				sut.changeLink();
+				//verify
+				expect(resbody.find("a.dic").attr("href")).toMatch(/\/b\/a\/name\/1-#32/);
+				expect(resbody.find("a.dic").attr("target")).toBeUndefined();
 			});
 		});
 	});
@@ -1639,7 +1722,7 @@ describe("", function(){
 				$("#bbs dl").append(
 					'<div class="pager"><a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a><a href="/b/a/bbs/1-">1-</a></div>' +
 					'<dt class="reshead"><a name="31" class="resnumhead"></a>31 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' + 
-					'<dd class="resbody">NGID</dd>' + 
+					'<dd class="resbody"><a href="/b/a/name/31-#31" rel="nofollow" target="_blank" class="dic">&gt;&gt;31</a></dd>' + 
 					'<dt class="reshead"><a name="32" class="resnumhead"></a>32 ： <span class="name">NGネーム</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
 					'<dd class="resbody">NGネーム</dd>');
 				$("#sandbox").prepend("<div id='topline' style='height: 36px; position: fixed;><ul id='topbarRightMenu' class='popupRightMenu'>" + 
@@ -1650,6 +1733,7 @@ describe("", function(){
 				sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
 				GM_setValue("tooltipOnDicPage", true);
 				GM_setValue("showIDTooltip", true);
+				GM_setValue("showResAnchorTooltip", true);
 				GM_setValue("useNG", true);
 				GM_setValue("ngname", "NGネーム");
 			});
@@ -1672,6 +1756,10 @@ describe("", function(){
 		  		expect(res.find("div[class^='ID'] > div .reshead").size()).toEqual(2);
 		  		res.find(".IDMulti").trigger("mouseleave");
 		  		expect(res.find("div[class^='ID'] > div").size()).toEqual(0);
+		  		expect($("#bbs dl dd").eq(0).find("a.dic").attr("target")).toBeUndefined();
+		  		$("#bbs dl dd").eq(0).find("a.dic").trigger("mouseenter");
+		  		expect($("#bbs dl dd").eq(0).find("span.numTooltip > div .reshead").size()).toEqual(1);
+		  		$("#bbs dl dd").eq(0).find("a.dic").trigger("mouseleave");
 		  		expect(res.hasClass("deleted")).toEqual(false);
 		  		expect($("#bbs dl dt").eq(1).hasClass("deleted")).toEqual(true);
 		  		expect(res.find("#contextMenu").size()).toEqual(0);
@@ -1789,18 +1877,21 @@ describe("", function(){
 			beforeEach(function(){
 				GM_setValue("useNG", true);
 				GM_setValue("showIDTooltip", true);
+				GM_setValue("showResAnchorTooltip", true);
 				GM_setValue("classificationID", true);
 				GM_setValue("tooltipOnDicPage", true);
 				GM_setValue("ngid", "b6fD7NC5x/");
 				$("#sandbox").append("<div id='bbs'><dl>" +
 					'<dt class="reshead"><a name="33" class="resnumhead"></a>33 ： <span class="name">NGネーム</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
-					'<dd class="resbody">NGネーム</dd>' +
+					'<dd class="resbody"><a href="/b/a/name/31-#33" rel="nofollow" target="_blank" class="dic">&gt;&gt;33</a></dd>' +
+					'<dt class="reshead"><a name="34" class="resnumhead"></a>34 ： <span class="name">再帰</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5xa</dt>' +
+					'<dd class="resbody"><a href="/b/a/name/31-#34" rel="nofollow" target="_blank" class="dic">&gt;&gt;34</a></dd>' +
 					"</dl></div>");
 				appendDl = $("<dl>" +
 					'<dt class="reshead"><a name="31" class="resnumhead"></a>31 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
-					'<dd class="resbody">NGID</dd>' +
+					'<dd class="resbody">a</dd>' +
 					'<dt class="reshead"><a name="32" class="resnumhead"></a>32 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5ng</dt>' +
-					'<dd class="resbody">NGID</dd>' +
+					'<dd class="resbody"><a href="/b/a/name/31-#34" rel="nofollow" target="_blank" class="dic">&gt;&gt;34</a></dd>' +
 					"</dl>");
 				urls[0] = basicUrl + "1-";
 				urls[1] = basicUrl + "31-";
@@ -1818,19 +1909,25 @@ describe("", function(){
 				//exercise
 				sut.prependBbs(appendDl);
 				//verify
-				expect($("#bbs dl dt").size()).toEqual(3);
+				expect($("#bbs dl dt").size()).toEqual(4);
 				var res = $("#bbs dl dt").eq(0);
 				expect(res.html()).toMatch(/\[1\/2\]/);
 				expect(res.hasClass("deleted")).toEqual(true);
 				expect($("#loading").size()).toEqual(0);
 				expect(sut.isNowLoading).toEqual(false);
 				var res2 = $("#bbs dl dt").eq(1);
+				expect($("#bbs dl dd").eq(1).find("a.dic").attr("target")).toBeUndefined();
+				expect($("#bbs dl dd").eq(1).find("a.dic").attr("href")).toEqual("/b/a/name/61-#34");
 				expect(res2.hasClass("deleted")).toEqual(false);
 				expect(res2.find("#contextMenu").size()).toEqual(0);
 				res2.find(".ID").trigger("click");
 				expect(res2.find("#contextMenu").size()).toEqual(1);
 				res2.find("#contextMenu #ngidMenu").trigger("click");
 				expect(res2.hasClass("deleted")).toEqual(true);
+				var res4 = $("#bbs dl dd").eq(3);
+				res4.find("a.dic").trigger("mouseenter");
+				expect(res4.find("span.numTooltip > div .reshead").size()).toEqual(1);
+				res4.find("a.dic").trigger("mouseleave");
 			});
 		});
 
@@ -1943,13 +2040,13 @@ describe("", function(){
 					'<dt class="reshead"><a name="32" class="resnumhead"></a>32 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
 					'<dd class="resbody">NGID</dd>' +
 					'<dt class="reshead"><a name="33" class="resnumhead"></a>33 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5ng</dt>' +
-					'<dd class="resbody">NGID</dd>' +
+					'<dd class="resbody"><a href="/b/a/name/31-#32" rel="nofollow" target="_blank" class="dic">&gt;&gt;32</a></dd>' +
 					"</dl>");
 				urls[0] = basicUrl + "1-";
 				urls[1] = basicUrl + "31-";
 				urls[2] = basicUrl + "61-";
 				$("#sandbox dl").prepend("<p id='loading'>now loading...</p>");
-				spyOn(urlAnalyzer, "getNowUrl").and.returnValue(basicUrl + "61-");
+				spyOn(urlAnalyzer, "getNowUrl").and.returnValue(basicUrl + "1-");
 				spyOn(urlAnalyzer, "inArticlePage").and.returnValue(false);
 				sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
 				sut.isNowLoading = true;
@@ -1968,6 +2065,8 @@ describe("", function(){
 				expect($("#loading").size()).toEqual(0);
 				expect(sut.isNowLoading).toEqual(false);
 				var res2 = $("#bbs dl dt").eq(2);
+				expect($("#bbs dl dd").eq(2).find("a.dic").attr("target")).toBeUndefined();
+				expect($("#bbs dl dd").eq(2).find("a.dic").attr("href")).toEqual("/b/a/name/1-#32");
 				expect(res2.hasClass("deleted")).toEqual(false);
 				expect(res2.find("#contextMenu").size()).toEqual(0);
 				res2.find(".ID").trigger("click");
@@ -2466,13 +2565,13 @@ describe("", function(){
 				'<dd class="resbody">NGID</dd></dl>';
 			mainHtmls[basicUrl + "31-"] = "<dl>" +
 				'<dt class="reshead"><a name="32" class="resnumhead"></a>32 ： <span class="name">NGネーム</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
-				'<dd class="resbody">NGネーム</dd></dl>';
+				'<dd class="resbody"><a href="/b/a/name/31-#32" rel="nofollow" target="_blank" class="dic">&gt;&gt;32</a></dd></dl>';
 			mainHtmls[basicUrl + "61-"] = "<dl>" +
 				'<dt class="reshead"><a name="33" class="resnumhead"></a>33 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
 				'<dd class="resbody">NGワード</dd></dl>';
 			mainHtmls[basicUrl + "91-"] = "<dl>" +
 				'<dt class="reshead"><a name="34" class="resnumhead"></a>34 ： <span class="name">31</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
-				'<dd class="resbody">NGレス</dd></dl>';
+				'<dd class="resbody"><a href="/b/a/name/91-#32" rel="nofollow" target="_blank" class="dic">&gt;&gt;32-33</a></dd></dl>';
 			htmls = [];
 			for(url in mainHtmls){
 				htmls[url] = htmlHead + barHtml + "<div id='bbs'>" + pager + mainHtmls[url] + pager + "</div>" + htmlTail;
@@ -2481,7 +2580,6 @@ describe("", function(){
 			$("#sandbox").append(barHtml + "<div id='bbs'>" + pager + mainHtmls[basicUrl + "31-"] + pager + "</div>");
 			jasmine.clock().install();
 			spyOn($, "get").and.callFake(function(url, callback){
-				console.log(url);
 				callback(htmls[url]);
 			});
 		});
@@ -2490,12 +2588,14 @@ describe("", function(){
 			//exercise
 			c.main(urlAnalyzer);
 			//verify
-			var id = $("#bbs dl dt div");
-			expect(id.hasClass("ID")).toEqual(true);
-			id.trigger("mouseenter");
-			expect(id.find("dt").size()).toEqual(1);
-			id.trigger("mouseleave");
-			id.trigger("click");
+			expect($("#bbs dl dt div").hasClass("ID")).toEqual(true);
+			$("#bbs dl dd a.dic").trigger("mouseenter");
+			expect($("span.numTooltip > div .reshead").size()).toEqual(1);
+			$("#bbs dl dd a.dic").trigger("mouseleave");
+			$("#bbs dl dt div.ID").trigger("mouseenter");
+			expect($("#bbs dl dt div.ID").find(".reshead").size()).toEqual(1);
+			$("#bbs dl dt div.ID").trigger("mouseleave");
+			$("#bbs dl dt div.ID").trigger("click");
 			expect($("#bbs dl dt #contextMenu").size()).toEqual(1);
 			expect($("#bbs dl dt").hasClass("deleted")).toEqual(false);
 			$("#bbs dl dt #contextMenu #ngidMenu").trigger("click");
@@ -2530,6 +2630,13 @@ describe("", function(){
 			$("#ngidTextarea").val("");
 			$("#decideNG").trigger("click");
 			expect($("#bbs dl dt.deleted").size()).toEqual(0);
+			$("#bbs dl dd").eq(3).find("a.dic").trigger("mouseenter");
+			expect($("#bbs dl dd").eq(3).find("span.numTooltip > div .reshead").size()).toEqual(2);
+			$("#bbs dl dd").eq(3).find("a.dic").trigger("mouseleave");
+			$("#bbs dl dd").eq(1).find("a.dic").trigger("mouseenter");
+			expect($("#bbs dl dd").eq(1).find("span.numTooltip > div .reshead").size()).toEqual(1);
+			$("#bbs dl dd").eq(1).find("a.dic").trigger("mouseleave");
+			$("#topbarRightMenu #bbsLi").trigger("click");
 			//tearDown
 			$("#sandbox").remove();
 			$("#defCss").remove();
