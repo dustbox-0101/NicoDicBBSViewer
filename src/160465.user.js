@@ -61,14 +61,17 @@ var net_threeaster_NicoDicBBSViewer = {};
 
 	UrlAnalyzer.prototype.isPageOf = function(url){
 		var nowUrl = this.getNowUrl();
+		type = this.getPageType(url);
+		nowType = type !== undefined ? this.getPageType(nowUrl): undefined; //idPageOfの仕様のつじつま合わせ
 		url = this.getPageName(url);
 		nowUrl = this.getPageName(nowUrl);
-		return url === nowUrl;
+		return type === nowType && url === nowUrl;
 	};
 
 	UrlAnalyzer.prototype.getPageName = function(url){
-		if(url.indexOf("a/") !== -1){
-			url = url.split("a/")[1];
+		var type = this.getPageType(url);
+		if(type !== undefined && url.indexOf(type) !== -1){
+			url = url.split(type + "/")[1];
 		}
 		url = url.split("/")[0];
 		url = url.split(":")[0];
@@ -78,6 +81,22 @@ var net_threeaster_NicoDicBBSViewer = {};
 
 	UrlAnalyzer.prototype.getNowPageName = function(){
 		return this.getPageName(this.getNowUrl());
+	}
+
+	UrlAnalyzer.prototype.getPageType = function(url) {
+		if(url.indexOf('http://dic.nicovideo.jp') !== -1){
+			url = url.replace('http://dic.nicovideo.jp', '');
+		}
+		var parts = url.split('/');
+		if(parts[1] === 'b'){
+			return parts[2];
+		}else{
+			return parts[1];
+		}
+	};
+
+	UrlAnalyzer.prototype.getNowPageType = function(){
+		return this.getPageType(this.getNowUrl());
 	}
 
 	UrlAnalyzer.prototype.changeNumber = function(url){
@@ -204,7 +223,6 @@ var net_threeaster_NicoDicBBSViewer = {};
 		}else{
 			this.urlAnalyzer = ana;
 		}
-		
 	};
 
 	Res.prototype.backupRes = function(){
@@ -430,12 +448,13 @@ var net_threeaster_NicoDicBBSViewer = {};
 			tooltip.height(c - $("#topline").height());
 		}
 	};
-
 	Res.prototype.changeLink = function(){
-		this.resbody.find("a.dic").removeAttr("target");
 		var self = this;
 		this.resbody.find("a.dic").each(function(){
-			$(this).attr("href", self.urlAnalyzer.changeNumber($(this).attr("href")));
+			if(self.urlAnalyzer.isPageOf($(this).attr('href'))){
+				$(this).removeAttr("target");
+				$(this).attr("href", self.urlAnalyzer.changeNumber($(this).attr("href")));
+			}
 		});
 	};
 

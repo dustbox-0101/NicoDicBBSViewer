@@ -336,6 +336,11 @@ describe("", function(){
 				//exercise
 				expect(actual).toEqual(true);
 			});
+
+			it('同名の生放送記事を受け取った時、falseを返す', function(){
+				var actual = sut.isPageOf('http://dic.nicovideo.jp/l/res');
+				expect(actual).toEqual(false);
+			})
 		});
 
 		describe("getNowPageNameのテスト", function(){
@@ -373,11 +378,37 @@ describe("", function(){
 
 			it("現在掲示板ページにいて、urlに#が付いている時も記事名を返す", function(){
 				//setUP
-				spyOn(sut, "getNowUrl").and.returnValue("http://dic.nicovideo.jp/b/a/res/1021-#1024");
+				spyOn(sut, "getNowUrl").and.returnValue("http://dic.nicovideo.jp/v/sm1");
 				//exercise
 				var actual = sut.getNowPageName();
 				//verify
-				expect(actual).toEqual("res");
+				expect(actual).toEqual("sm1");
+			});
+
+			it('現在動画ページにいる時、記事名を返す', function(){
+				spyOn(sut, "getNowUrl").and.returnValue("http://dic.nicovideo.jp/b/a/res/1021-#1024");
+			});
+		});
+
+		describe('getPageTypeのテスト', function(){
+			var sut;
+			beforeEach(function(){
+				sut = new c.UrlAnalyzer();
+			});
+
+			it('相対パスの記事ページの時aを返す', function(){
+				var actual = sut.getPageType('/a/res');
+				expect(actual).toEqual('a');
+			});
+
+			it('絶対パスの記事ページの時aを返す', function(){
+				var actual = sut.getPageType("http://dic.nicovideo.jp/a/res");
+				expect(actual).toEqual('a');
+			});
+
+			it('相対パスの掲示板ページの時aを返す', function(){
+				var actual = sut.getPageType('/b/a/res/1-');
+				expect(actual).toEqual('a');
 			});
 		});
 
@@ -1288,8 +1319,8 @@ describe("", function(){
 				//exercise
 				sut.changeLink();
 				//verify
-				expect(resbody.find("a.dic").attr("href")).toMatch(/\/b\/a\/name\/31-#32/);
-				expect(resbody.find("a.dic").attr("target")).toBeUndefined();
+				expect(sut.resbody.find("a.dic").attr("href")).toMatch(/\/b\/a\/name\/31-#32/);
+				expect(sut.resbody.find("a.dic").attr("target")).toBeUndefined();
 			});
 
 			it("掲示板ページでリンク先と同じページの時、リンク先を変更せず、同じタブで飛ぶようにする", function(){
@@ -1299,8 +1330,8 @@ describe("", function(){
 				//exercise
 				sut.changeLink();
 				//verify
-				expect(resbody.find("a.dic").attr("href")).toMatch(/\/b\/a\/name\/31-#32/);
-				expect(resbody.find("a.dic").attr("target")).toBeUndefined();
+				expect(sut.resbody.find("a.dic").attr("href")).toMatch(/\/b\/a\/name\/31-#32/);
+				expect(sut.resbody.find("a.dic").attr("target")).toBeUndefined();
 			});
 
 			it("掲示板ページでリンク先と違うページの時、現在のページにリンク先を変更して、同じタブで飛ぶようにする", function(){
@@ -1310,8 +1341,20 @@ describe("", function(){
 				//exercise
 				sut.changeLink();
 				//verify
-				expect(resbody.find("a.dic").attr("href")).toMatch(/\/b\/a\/name\/1-#32/);
-				expect(resbody.find("a.dic").attr("target")).toBeUndefined();
+				expect(sut.resbody.find("a.dic").attr("href")).toMatch(/\/b\/a\/name\/1-#32/);
+				expect(sut.resbody.find("a.dic").attr("target")).toBeUndefined();
+			});
+
+			it('掲示板ページでリンク先が違う記事のページの場合、変更しない', function(){
+				//setUp
+				spyOn(urlAnalyzer, "getNowUrl").and.returnValue("http://dic.nicovideo.jp/b/a/name/1-");
+				resbody =$('<dd class="resbody"><a href="http://dic.nicovideo.jp/u/1" rel="nofollow" target="_blank" class="dic">http://d<wbr>ic.nicov<wbr>ideo.jp/<wbr>u/1</a></dd>');
+				var sut = new c.Res(reshead, resbody, urlAnalyzer);
+				//exercise
+				sut.changeLink();
+				//verify
+				expect(sut.resbody.find('a.dic').attr('href')).toEqual('http://dic.nicovideo.jp/u/1');
+				expect(sut.resbody.find('a.dic').attr('target')).toEqual('_blank');
 			});
 		});
 	});
@@ -1722,7 +1765,7 @@ describe("", function(){
 				$("#bbs dl").append(
 					'<div class="pager"><a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a><a href="/b/a/bbs/1-">1-</a></div>' +
 					'<dt class="reshead"><a name="31" class="resnumhead"></a>31 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' + 
-					'<dd class="resbody"><a href="/b/a/name/31-#31" rel="nofollow" target="_blank" class="dic">&gt;&gt;31</a></dd>' + 
+					'<dd class="resbody"><a href="/b/a/bbs/31-#31" rel="nofollow" target="_blank" class="dic">&gt;&gt;31</a></dd>' + 
 					'<dt class="reshead"><a name="32" class="resnumhead"></a>32 ： <span class="name">NGネーム</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
 					'<dd class="resbody">NGネーム</dd>');
 				$("#sandbox").prepend("<div id='topline' style='height: 36px; position: fixed;><ul id='topbarRightMenu' class='popupRightMenu'>" + 
@@ -1883,15 +1926,15 @@ describe("", function(){
 				GM_setValue("ngid", "b6fD7NC5x/");
 				$("#sandbox").append("<div id='bbs'><dl>" +
 					'<dt class="reshead"><a name="33" class="resnumhead"></a>33 ： <span class="name">NGネーム</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
-					'<dd class="resbody"><a href="/b/a/name/31-#33" rel="nofollow" target="_blank" class="dic">&gt;&gt;33</a></dd>' +
+					'<dd class="resbody"><a href="/b/a/bbs/31-#33" rel="nofollow" target="_blank" class="dic">&gt;&gt;33</a></dd>' +
 					'<dt class="reshead"><a name="34" class="resnumhead"></a>34 ： <span class="name">再帰</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5xa</dt>' +
-					'<dd class="resbody"><a href="/b/a/name/31-#34" rel="nofollow" target="_blank" class="dic">&gt;&gt;34</a></dd>' +
+					'<dd class="resbody"><a href="/b/a/bbs/31-#34" rel="nofollow" target="_blank" class="dic">&gt;&gt;34</a></dd>' +
 					"</dl></div>");
 				appendDl = $("<dl>" +
 					'<dt class="reshead"><a name="31" class="resnumhead"></a>31 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
 					'<dd class="resbody">a</dd>' +
 					'<dt class="reshead"><a name="32" class="resnumhead"></a>32 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5ng</dt>' +
-					'<dd class="resbody"><a href="/b/a/name/31-#34" rel="nofollow" target="_blank" class="dic">&gt;&gt;34</a></dd>' +
+					'<dd class="resbody"><a href="/b/a/bbs/31-#34" rel="nofollow" target="_blank" class="dic">&gt;&gt;34</a></dd>' +
 					"</dl>");
 				urls[0] = basicUrl + "1-";
 				urls[1] = basicUrl + "31-";
@@ -1917,7 +1960,7 @@ describe("", function(){
 				expect(sut.isNowLoading).toEqual(false);
 				var res2 = $("#bbs dl dt").eq(1);
 				expect($("#bbs dl dd").eq(1).find("a.dic").attr("target")).toBeUndefined();
-				expect($("#bbs dl dd").eq(1).find("a.dic").attr("href")).toEqual("/b/a/name/61-#34");
+				expect($("#bbs dl dd").eq(1).find("a.dic").attr("href")).toEqual("/b/a/bbs/61-#34");
 				expect(res2.hasClass("deleted")).toEqual(false);
 				expect(res2.find("#contextMenu").size()).toEqual(0);
 				res2.find(".ID").trigger("click");
@@ -2040,7 +2083,7 @@ describe("", function(){
 					'<dt class="reshead"><a name="32" class="resnumhead"></a>32 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5x/</dt>' +
 					'<dd class="resbody">NGID</dd>' +
 					'<dt class="reshead"><a name="33" class="resnumhead"></a>33 ： <span class="name">ななしのよっしん</span> ：2009/01/11(日) 23:44:16 ID: b6fD7NC5ng</dt>' +
-					'<dd class="resbody"><a href="/b/a/name/31-#32" rel="nofollow" target="_blank" class="dic">&gt;&gt;32</a></dd>' +
+					'<dd class="resbody"><a href="/b/a/bbs/31-#32" rel="nofollow" target="_blank" class="dic">&gt;&gt;32</a></dd>' +
 					"</dl>");
 				urls[0] = basicUrl + "1-";
 				urls[1] = basicUrl + "31-";
@@ -2066,7 +2109,7 @@ describe("", function(){
 				expect(sut.isNowLoading).toEqual(false);
 				var res2 = $("#bbs dl dt").eq(2);
 				expect($("#bbs dl dd").eq(2).find("a.dic").attr("target")).toBeUndefined();
-				expect($("#bbs dl dd").eq(2).find("a.dic").attr("href")).toEqual("/b/a/name/1-#32");
+				expect($("#bbs dl dd").eq(2).find("a.dic").attr("href")).toEqual("/b/a/bbs/1-#32");
 				expect(res2.hasClass("deleted")).toEqual(false);
 				expect(res2.find("#contextMenu").size()).toEqual(0);
 				res2.find(".ID").trigger("click");
@@ -2432,7 +2475,7 @@ describe("", function(){
 					expect($("#ng").css("display")).toEqual("block");
 					expect($("#bbsLi").hasClass("selected")).toEqual(false);
 					expect($("#ngLi").hasClass("selected")).toEqual(true);
-					expect($("html").scrollTop()).toBeCloseTo($("#ng").offset().top - $("#topline").height(), -1);
+					expect($("html").scrollTop()).toBeCloseTo($("#ng").offset().top - $("#topline").height(), -3);
 				});
 
 				it("スクロールをしてからngLiをクリックして、再度スクロールしてbbsLiをクリックすると、掲示板画面になり、メニューもbbsLiが選択されている状態になり、高さは前のスクロール位置になる", function(){
