@@ -991,5 +991,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 	c.main = main;
 
 	//-----main実行/テスト時には途中で止まる-----
-	main();
+	if(typeof GM_getValue === 'function'){
+		main();	
+	}
 })(jQuery);
