@@ -658,6 +658,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 
 		$("#ng").append('<div style="clear:left;"><form><ul style="list-style-type: none;"></ul></form><div>');
 		var parentUl = $("#ng form ul");
+		appendConfigLi(parentUl, "withOnlyOnePage", '一つのページに継ぎ足す');
 		appendConfigLi(parentUl, "autoLoad", "下までスクロールした時に次のページを読み込む");
 
 		var ngUl = getSubUl();
@@ -959,7 +960,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 //以下main
 	var main = function(ana){
 		initConfig(["useNG", "autoLoad", "tooltipOnDicPage", "showIDTooltip", "showResAnchorTooltip", "showResNumberTooltip", "showResHandleTooltip", 
-					"classificationID", "classificationResNumber"]);
+					"classificationID", "classificationResNumber", "withOnlyOnePage"]);
 		insertStyle();
 		$("#bbs dl").attr("id", "bbsmain");
 		$(".border").remove();

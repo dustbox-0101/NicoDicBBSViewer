@@ -1587,62 +1587,188 @@ describe("", function(){
 
 		describe("initPagerのテスト", function(){
 
-			describe("掲示板が3ページあるとき", function(){
-
+			describe('withOnlyOnePageがtrueのとき', function(){
 				beforeEach(function(){
-					for(var i = 0; i < 3; i++){
-						urls[i] = basicUrl + (30 * i + 1) + "-";
-					}
+					GM_setValue('withOnlyOnePage', true);
 				});
 
-				it("記事ページでは、.naviが消える", function(){
-					//setUp
-					var nowUrl = "http://dic.nicovideo.jp/a/bbs";
-					spyOn(urlAnalyzer, "getNowUrl").and.returnValue(nowUrl);
-					sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
-					var divHead = '<div class="pager">';
-					var navi = '<a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a><a href="/b/a/bbs/31-" class="navi">&#171; 前へ</a>';
-					var pager = '<a href="/b/a/bbs/1-">1-</a><a href="/b/a/bbs/31-">31-</a><a href="/b/a/bbs/61-">61-</a>';
-					var divTail = "</div>";
-					$("#sandbox").append('<div id="bbs">' + divHead + navi + pager + divTail + divHead + navi + pager + divTail + '</div>');
-					//exercise
-					sut.initPager();
-					//verify
-					expect($(".pager").eq(0).html()).toEqual($(divHead + pager + divTail).html());
-					expect($(".pager").eq(1).html()).toEqual($(divHead + pager + divTail).html());
+				describe("掲示板が3ページあるとき", function(){
+
+					beforeEach(function(){
+						for(var i = 0; i < 3; i++){
+							urls[i] = basicUrl + (30 * i + 1) + "-";
+						}
+					});
+
+					it("記事ページでは、.naviが消える", function(){
+						//setUp
+						var nowUrl = "http://dic.nicovideo.jp/a/bbs";
+						spyOn(urlAnalyzer, "getNowUrl").and.returnValue(nowUrl);
+						sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+						var divHead = '<div class="pager">';
+						var navi = '<a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a><a href="/b/a/bbs/31-" class="navi">&#171; 前へ</a>';
+						var pager = '<a href="/b/a/bbs/1-">1-</a><a href="/b/a/bbs/31-">31-</a><a href="/b/a/bbs/61-">61-</a>';
+						var divTail = "</div>";
+						$("#sandbox").append('<div id="bbs">' + divHead + navi + pager + divTail + divHead + navi + pager + divTail + '</div>');
+						//exercise
+						sut.initPager();
+						//verify
+						expect($(".pager").eq(0).html()).toEqual($(divHead + pager + divTail).html());
+						expect($(".pager").eq(1).html()).toEqual($(divHead + pager + divTail).html());
+					});
+
+					it("掲示板ページで中間のページの時、上は記事へのリンクと掲示板の前のページを呼び出す前へのリンクが、下は記事へのリンクと掲示板の次のページを呼び出す次へのリンクが出来る", function(){
+						//setUp
+						var nowUrl = "http://dic.nicovideo.jp/b/a/bbs/31-";
+						spyOn(urlAnalyzer, "getNowUrl").and.returnValue(nowUrl);
+						sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+						spyOn(sut, "readPreviousBbs");
+						spyOn(sut, "readNextBbs");
+						var divHead = '<div class="pager">'
+						var navi1 = '<a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a><a href="/b/a/bbs/1-" class="navi">&#171; 前へ</a>';
+						var pager = '<a href="/b/a/bbs/1-">1-</a><span class="current">31-</span><a href="/b/a/bbs/61-">61-</a>';
+						var navi2 = '<a href="/b/a/bbs/61-" class="navi">次へ &#187;</a>';
+						var divTail = '</div>';
+						$("#sandbox").append('<div id="bbs">' + divHead + navi1 + pager + navi2 + divTail + divHead + navi1 + pager + navi2 + divTail + '</div>');
+						//exeicise
+						sut.initPager();
+						//verify
+						expect($(".pager").eq(0).find("a").size()).toEqual(2);
+						expect($(".pager").eq(0).find("a").eq(0).html()).toEqual("-bbsの記事へ戻る-");
+						expect($(".pager").eq(0).find("a").eq(1).html()).toEqual("前へ");
+						expect($(".pager").eq(1).find("a").size()).toEqual(2);
+						expect($(".pager").eq(1).find("a").eq(0).html()).toEqual("-bbsの記事へ戻る-");
+						expect($(".pager").eq(1).find("a").eq(1).html()).toEqual("次へ");
+						expect(sut.readPreviousBbs).not.toHaveBeenCalled();
+						$("#loadPreviousPageLinks").trigger("click");
+						expect(sut.readPreviousBbs).toHaveBeenCalled();
+						expect(sut.readNextBbs).not.toHaveBeenCalled();
+						$("#loadNextPageLinks").trigger("click");
+						expect(sut.readNextBbs).toHaveBeenCalled();
+					});
+
+					it("掲示板ページで最初のページの時、上は記事へのリンクが、下は記事へのリンクと掲示板の次のページを呼び出す次へのリンクが出来る", function(){
+						//setUp
+						var nowUrl = "http://dic.nicovideo.jp/b/a/bbs/1-";
+						spyOn(urlAnalyzer, "getNowUrl").and.returnValue(nowUrl);
+						sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+						spyOn(sut, "readPreviousBbs");
+						spyOn(sut, "readNextBbs");
+						var divHead = '<div class="pager">'
+						var navi1 = '<a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a>';
+						var pager = '<span class="current">1-</span><a href="/b/a/bbs/31-">31-</a><a href="/b/a/bbs/61-">61-</a>';
+						var navi2 = '<a href="/b/a/bbs/31-" class="navi">次へ &#187;</a>';
+						var divTail = '</div>';
+						$("#sandbox").append('<div id="bbs">' + divHead + navi1 + pager + navi2 + divTail + divHead + navi1 + pager + navi2 + divTail + '</div>');
+						//exeicise
+						sut.initPager();
+						//verify
+						expect($(".pager").eq(0).find("a").size()).toEqual(1);
+						expect($(".pager").eq(0).find("a").eq(0).html()).toEqual("-bbsの記事へ戻る-");
+						expect($(".pager").eq(1).find("a").size()).toEqual(2);
+						expect($(".pager").eq(1).find("a").eq(0).html()).toEqual("-bbsの記事へ戻る-");
+						expect($(".pager").eq(1).find("a").eq(1).html()).toEqual("次へ");
+						expect(sut.readNextBbs).not.toHaveBeenCalled();
+						$("#loadNextPageLinks").trigger("click");
+						expect(sut.readNextBbs).toHaveBeenCalled();
+					});
+
+					it("掲示板ページで最後のページの時、上は記事へのリンクと掲示板の前のページを呼び出す前へのリンクが、下は記事へのリンクが出来る", function(){
+						//setUp
+						var nowUrl = "http://dic.nicovideo.jp/b/a/bbs/61-";
+						spyOn(urlAnalyzer, "getNowUrl").and.returnValue(nowUrl);
+						sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+						spyOn(sut, "readPreviousBbs");
+						spyOn(sut, "readNextBbs");
+						var divHead = '<div class="pager">'
+						var navi1 = '<a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a><a href="/b/a/bbs/31-" class="navi">&#171; 前へ</a>';
+						var pager = '<a href="/b/a/bbs/1-">1-</a><a href="/b/a/bbs/31-">31-</a><span class="current">61-</span>';
+						var navi2 = "";
+						var divTail = '</div>';
+						$("#sandbox").append('<div id="bbs">' + divHead + navi1 + pager + navi2 + divTail + divHead + navi1 + pager + navi2 + divTail + '</div>');
+						//exeicise
+						sut.initPager();
+						//verify
+						expect($(".pager").eq(0).find("a").size()).toEqual(2);
+						expect($(".pager").eq(0).find("a").eq(0).html()).toEqual("-bbsの記事へ戻る-");
+						expect($(".pager").eq(0).find("a").eq(1).html()).toEqual("前へ");
+						expect($(".pager").eq(1).find("a").size()).toEqual(1);
+						expect($(".pager").eq(1).find("a").eq(0).html()).toEqual("-bbsの記事へ戻る-");
+						expect(sut.readPreviousBbs).not.toHaveBeenCalled();
+						$("#loadPreviousPageLinks").trigger("click");
+						expect(sut.readPreviousBbs).toHaveBeenCalled();
+					});
 				});
 
-				it("掲示板ページで中間のページの時、上は記事へのリンクと掲示板の前のページを呼び出す前へのリンクが、下は記事へのリンクと掲示板の次のページを呼び出す次へのリンクが出来る", function(){
-					//setUp
-					var nowUrl = "http://dic.nicovideo.jp/b/a/bbs/31-";
-					spyOn(urlAnalyzer, "getNowUrl").and.returnValue(nowUrl);
-					sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
-					spyOn(sut, "readPreviousBbs");
-					spyOn(sut, "readNextBbs");
-					var divHead = '<div class="pager">'
-					var navi1 = '<a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a><a href="/b/a/bbs/1-" class="navi">&#171; 前へ</a>';
-					var pager = '<a href="/b/a/bbs/1-">1-</a><span class="current">31-</span><a href="/b/a/bbs/61-">61-</a>';
-					var navi2 = '<a href="/b/a/bbs/61-" class="navi">次へ &#187;</a>';
-					var divTail = '</div>';
-					$("#sandbox").append('<div id="bbs">' + divHead + navi1 + pager + navi2 + divTail + divHead + navi1 + pager + navi2 + divTail + '</div>');
-					//exeicise
-					sut.initPager();
-					//verify
-					expect($(".pager").eq(0).find("a").size()).toEqual(2);
-					expect($(".pager").eq(0).find("a").eq(0).html()).toEqual("-bbsの記事へ戻る-");
-					expect($(".pager").eq(0).find("a").eq(1).html()).toEqual("前へ");
-					expect($(".pager").eq(1).find("a").size()).toEqual(2);
-					expect($(".pager").eq(1).find("a").eq(0).html()).toEqual("-bbsの記事へ戻る-");
-					expect($(".pager").eq(1).find("a").eq(1).html()).toEqual("次へ");
-					expect(sut.readPreviousBbs).not.toHaveBeenCalled();
-					$("#loadPreviousPageLinks").trigger("click");
-					expect(sut.readPreviousBbs).toHaveBeenCalled();
-					expect(sut.readNextBbs).not.toHaveBeenCalled();
-					$("#loadNextPageLinks").trigger("click");
-					expect(sut.readNextBbs).toHaveBeenCalled();
+				describe("掲示板が1ページの時", function(){
+					beforeEach(function(){
+						urls[0] = basicUrl + "1-";
+					});
+
+					it("記事ページでは、.naviが消える", function(){
+						//setUp
+						var nowUrl = "http://dic.nicovideo.jp/a/bbs";
+						spyOn(urlAnalyzer, "getNowUrl").and.returnValue(nowUrl);
+						sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+						var divHead = '<div class="pager">';
+						var navi = '<a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a>';
+						var pager = '<a href="/b/a/bbs/1-">1-</a>';
+						var divTail = "</div>";
+						$("#sandbox").append('<div id="bbs">' + divHead + navi + pager + divTail + divHead + navi + pager + divTail + '</div>');
+						//exercise
+						sut.initPager();
+						//verify
+						expect($(".pager").eq(0).html()).toEqual($(divHead + pager + divTail).html());
+						expect($(".pager").eq(1).html()).toEqual($(divHead + pager + divTail).html());
+					});
+
+					it("掲示板ページで最後のページの時、上も下も記事へのリンクが出来る", function(){
+						//setUp
+						var nowUrl = "http://dic.nicovideo.jp/b/a/bbs/1-";
+						spyOn(urlAnalyzer, "getNowUrl").and.returnValue(nowUrl);
+						sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+						spyOn(sut, "readPreviousBbs");
+						spyOn(sut, "readNextBbs");
+						var divHead = '<div class="pager">'
+						var navi1 = '<a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a>';
+						var pager = '<span class="current">1-</span>';
+						var navi2 = "";
+						var divTail = '</div>';
+						$("#sandbox").append('<div id="bbs">' + divHead + navi1 + pager + navi2 + divTail + divHead + navi1 + pager + navi2 + divTail + '</div>');
+						//exeicise
+						sut.initPager();
+						//verify
+						expect($(".pager").eq(0).find("a").size()).toEqual(1);
+						expect($(".pager").eq(0).find("a").eq(0).html()).toEqual("-bbsの記事へ戻る-");
+						expect($(".pager").eq(1).find("a").size()).toEqual(1);
+						expect($(".pager").eq(1).find("a").eq(0).html()).toEqual("-bbsの記事へ戻る-");
+					});
 				});
 
-				it("掲示板ページで最初のページの時、上は記事へのリンクが、下は記事へのリンクと掲示板の次のページを呼び出す次へのリンクが出来る", function(){
+				describe("掲示板が0ページの時", function(){
+					beforeEach(function(){
+						urls = [];
+					});
+
+					it("記事ページでは何も変化しない", function(){
+						//setUp
+						var nowUrl = "http://dic.nicovideo.jp/a/bbs";
+						spyOn(urlAnalyzer, "getNowUrl").and.returnValue(nowUrl);
+						sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+						//exercise
+						sut.initPager();
+						//verify
+						expect($(".pager").size()).toEqual(0);
+					});
+				});
+			});
+
+			describe('withOnlyOnePageがtrueのとき', function(){
+				beforeEach(function(){
+					GM_setValue('withOnlyOnePage', false);
+				});
+
+				it('pagerは変更されない', function(){
 					//setUp
 					var nowUrl = "http://dic.nicovideo.jp/b/a/bbs/1-";
 					spyOn(urlAnalyzer, "getNowUrl").and.returnValue(nowUrl);
@@ -1658,102 +1784,7 @@ describe("", function(){
 					//exeicise
 					sut.initPager();
 					//verify
-					expect($(".pager").eq(0).find("a").size()).toEqual(1);
-					expect($(".pager").eq(0).find("a").eq(0).html()).toEqual("-bbsの記事へ戻る-");
-					expect($(".pager").eq(1).find("a").size()).toEqual(2);
-					expect($(".pager").eq(1).find("a").eq(0).html()).toEqual("-bbsの記事へ戻る-");
-					expect($(".pager").eq(1).find("a").eq(1).html()).toEqual("次へ");
-					expect(sut.readNextBbs).not.toHaveBeenCalled();
-					$("#loadNextPageLinks").trigger("click");
-					expect(sut.readNextBbs).toHaveBeenCalled();
-				});
-
-				it("掲示板ページで最後のページの時、上は記事へのリンクと掲示板の前のページを呼び出す前へのリンクが、下は記事へのリンクが出来る", function(){
-					//setUp
-					var nowUrl = "http://dic.nicovideo.jp/b/a/bbs/61-";
-					spyOn(urlAnalyzer, "getNowUrl").and.returnValue(nowUrl);
-					sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
-					spyOn(sut, "readPreviousBbs");
-					spyOn(sut, "readNextBbs");
-					var divHead = '<div class="pager">'
-					var navi1 = '<a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a><a href="/b/a/bbs/31-" class="navi">&#171; 前へ</a>';
-					var pager = '<a href="/b/a/bbs/1-">1-</a><a href="/b/a/bbs/31-">31-</a><span class="current">61-</span>';
-					var navi2 = "";
-					var divTail = '</div>';
-					$("#sandbox").append('<div id="bbs">' + divHead + navi1 + pager + navi2 + divTail + divHead + navi1 + pager + navi2 + divTail + '</div>');
-					//exeicise
-					sut.initPager();
-					//verify
-					expect($(".pager").eq(0).find("a").size()).toEqual(2);
-					expect($(".pager").eq(0).find("a").eq(0).html()).toEqual("-bbsの記事へ戻る-");
-					expect($(".pager").eq(0).find("a").eq(1).html()).toEqual("前へ");
-					expect($(".pager").eq(1).find("a").size()).toEqual(1);
-					expect($(".pager").eq(1).find("a").eq(0).html()).toEqual("-bbsの記事へ戻る-");
-					expect(sut.readPreviousBbs).not.toHaveBeenCalled();
-					$("#loadPreviousPageLinks").trigger("click");
-					expect(sut.readPreviousBbs).toHaveBeenCalled();
-				});
-			});
-
-			describe("掲示板が1ページの時", function(){
-				beforeEach(function(){
-					urls[0] = basicUrl + "1-";
-				});
-
-				it("記事ページでは、.naviが消える", function(){
-					//setUp
-					var nowUrl = "http://dic.nicovideo.jp/a/bbs";
-					spyOn(urlAnalyzer, "getNowUrl").and.returnValue(nowUrl);
-					sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
-					var divHead = '<div class="pager">';
-					var navi = '<a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a>';
-					var pager = '<a href="/b/a/bbs/1-">1-</a>';
-					var divTail = "</div>";
-					$("#sandbox").append('<div id="bbs">' + divHead + navi + pager + divTail + divHead + navi + pager + divTail + '</div>');
-					//exercise
-					sut.initPager();
-					//verify
-					expect($(".pager").eq(0).html()).toEqual($(divHead + pager + divTail).html());
-					expect($(".pager").eq(1).html()).toEqual($(divHead + pager + divTail).html());
-				});
-
-				it("掲示板ページで最後のページの時、上も下も記事へのリンクが出来る", function(){
-					//setUp
-					var nowUrl = "http://dic.nicovideo.jp/b/a/bbs/1-";
-					spyOn(urlAnalyzer, "getNowUrl").and.returnValue(nowUrl);
-					sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
-					spyOn(sut, "readPreviousBbs");
-					spyOn(sut, "readNextBbs");
-					var divHead = '<div class="pager">'
-					var navi1 = '<a href="/a/bbs" class="navi">-bbsの記事へ戻る-</a>';
-					var pager = '<span class="current">1-</span>';
-					var navi2 = "";
-					var divTail = '</div>';
-					$("#sandbox").append('<div id="bbs">' + divHead + navi1 + pager + navi2 + divTail + divHead + navi1 + pager + navi2 + divTail + '</div>');
-					//exeicise
-					sut.initPager();
-					//verify
-					expect($(".pager").eq(0).find("a").size()).toEqual(1);
-					expect($(".pager").eq(0).find("a").eq(0).html()).toEqual("-bbsの記事へ戻る-");
-					expect($(".pager").eq(1).find("a").size()).toEqual(1);
-					expect($(".pager").eq(1).find("a").eq(0).html()).toEqual("-bbsの記事へ戻る-");
-				});
-			});
-
-			describe("掲示板が0ページの時", function(){
-				beforeEach(function(){
-					urls = [];
-				});
-
-				it("記事ページでは何も変化しない", function(){
-					//setUp
-					var nowUrl = "http://dic.nicovideo.jp/a/bbs";
-					spyOn(urlAnalyzer, "getNowUrl").and.returnValue(nowUrl);
-					sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
-					//exercise
-					sut.initPager();
-					//verify
-					expect($(".pager").size()).toEqual(0);
+					//途中　ここから
 				});
 			});
 		});
@@ -2411,27 +2442,27 @@ describe("", function(){
 				//exercise
 				sut.insertConfigHtml();
 				//verify
-				expect($("#ng form > ul > li").size()).toEqual(5);
+				expect($("#ng form > ul > li").size()).toEqual(6);
 				expect($("#ng form > ul > li > ul").eq(0).find("input:checkbox").size()).toEqual(2);
 				expect($("#ng form > ul > li > ul").eq(1).find("input:checkbox").size()).toEqual(4);
 				expect($("#ng form > ul > li > ul").eq(2).find("input:checkbox").size()).toEqual(2);
-				expect($("#ng form input:checkbox").size()).toEqual(10);
-				expect($("#ng form input:checkbox:not(:checked)").size()).toEqual(10);
+				expect($("#ng form input:checkbox").size()).toEqual(11);
+				expect($("#ng form input:checkbox:not(:checked)").size()).toEqual(11);
 			});
 
-			it("設定が全てtrueのとき、設定のチェックボックスが追加されて、全てにチェックがついていない", function(){
+			it("設定が全てtrueのとき、設定のチェックボックスが追加されて、全てにチェックがついている", function(){
 				//exercise
 				setFlag(["autoLoad", "useNG", "seethroughNG", "tooltipOnDicPage", "showIDTooltip", "showResAnchorTooltip", "showResNumberTooltip",
-					"showResHandleTooltip",	"classificationID", "classificationResNumber"]);
+					"showResHandleTooltip",	"classificationID", "classificationResNumber", "withOnlyOnePage"]);
 				//exercise
 				sut.insertConfigHtml();
 				//verify
-				expect($("#ng form > ul > li").size()).toEqual(5);
+				expect($("#ng form > ul > li").size()).toEqual(6);
 				expect($("#ng form > ul > li > ul").eq(0).find("input:checkbox").size()).toEqual(2);
 				expect($("#ng form > ul > li > ul").eq(1).find("input:checkbox").size()).toEqual(4);
 				expect($("#ng form > ul > li > ul").eq(2).find("input:checkbox").size()).toEqual(2);
-				expect($("#ng form input:checkbox").size()).toEqual(10);
-				expect($("#ng form input:checkbox:checked").size()).toEqual(10);
+				expect($("#ng form input:checkbox").size()).toEqual(11);
+				expect($("#ng form input:checkbox:checked").size()).toEqual(11);
 			});
 
 			it("設定画面にボタンが追加される", function(){
