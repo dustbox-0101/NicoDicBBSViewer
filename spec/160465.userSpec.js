@@ -5,6 +5,7 @@ describe("", function(){
 	beforeEach(function(){
 		c = net_threeaster_NicoDicBBSViewer;
 		$ = jQuery;
+		$('head').append('<link id="dummy_link">');
 		GM_value = {};
 		GM_setValue = function(name, value){
 			GM_value[name] = value;
@@ -16,12 +17,17 @@ describe("", function(){
 			toEqualAsUrl: function(util, customEqualityTesters){
 				return{
 					compare: function(actual, expected){
-						if(actual.indexOf("://") !== -1){
-							actual = actual.split("://")[1];
+						var urls = [actual, expected];
+						for(var i = 0; i < urls.length; i++){
+							urls[i] = urls[i].replace('http://', '');
+							urls[i] = urls[i].replace('file://', '');
+							var split_domain = /:\d+/;
+							if(urls[i].match(split_domain)){
+								urls[i] = urls[i].split(split_domain)[1];
+							}
 						}
-						if(expected.indexOf("://")!== -1){
-							expected = expected.split("://")[1];
-						}
+						actual = urls[0];
+						expected = urls[1];
 						var pass = actual === expected;
 						var message = "";
 						if(pass){
@@ -40,6 +46,7 @@ describe("", function(){
 	});
 
 	afterEach(function(){
+		$('#dummy_link').remove();
 		GM_value = {};
 	});
 
