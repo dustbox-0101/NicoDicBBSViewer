@@ -563,11 +563,11 @@ var net_threeaster_NicoDicBBSViewer = {};
 			var css = $("#nicoDicBBSViewerCSS");
 			if(GM_getValue("seethroughNG")){
 				if(css.html().indexOf("deleted") === -1){
-					css.html(css.html() + ".deleted{display:none}");
+					css.html(css.html() + ".deleted{display:none;}");
 				}
 			}else{
 				if(css.html().indexOf("deleted") !== -1){
-					css.html(css.html().replace(".deleted{display:none}", ""));
+					css.html(css.html().replace(".deleted{display:none;}", ""));
 				}
 			}
 		}
