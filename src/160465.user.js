@@ -664,7 +664,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 
 		$("#ng").append('<div style="clear:left;"><form><ul style="list-style-type: none;"></ul></form><div>');
 		var parentUl = $("#ng form ul");
-		appendConfigLi(parentUl, "withOnlyOnePage", '一つのページに継ぎ足す');
+		appendConfigLi(parentUl, "addToOnePage", '一つのページに継ぎ足す(更新時有効)');
 		appendConfigLi(parentUl, "autoLoad", "下までスクロールした時に次のページを読み込む");
 
 		var ngUl = getSubUl();
@@ -738,6 +738,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 			GM_setValue("ngres", $("#ngresTextarea").val());
 			setcbConfig("seethroughNG");
 			setcbConfig("loadAll");
+			setcbConfig("addToOnePage");
 			setcbConfig("autoLoad");
 			setcbConfig("useNG");
 			setcbConfig("tooltipOnDicPage");
@@ -759,6 +760,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 			$("#ngresTextarea").val(GM_getValue("ngres") ? GM_getValue("ngres") : "");
 			checkcbConfig("seethroughNG");
 			checkcbConfig("loadAll");
+			checkcbConfig("addToOnePage");
 			checkcbConfig("autoLoad");
 			checkcbConfig("useNG");
 			checkcbConfig("tooltipOnDicPage");
@@ -857,6 +859,9 @@ var net_threeaster_NicoDicBBSViewer = {};
 	};
 
 	ManagerToReadBbs.prototype.initPager = function(){
+		if(!GM_getValue("addToOnePage")){
+			return;
+		}
 		var pager = $("#bbs .pager");
 		var self = this;
 		if(this.urlAnalyzer.inArticlePage()){
@@ -965,8 +970,8 @@ var net_threeaster_NicoDicBBSViewer = {};
 
 //以下main
 	var main = function(ana){
-		initConfig(["useNG", "autoLoad", "tooltipOnDicPage", "showIDTooltip", "showResAnchorTooltip", "showResNumberTooltip", "showResHandleTooltip", 
-					"classificationID", "classificationResNumber", "withOnlyOnePage"]);
+		initConfig(["useNG", "addToOnePage", "autoLoad", "tooltipOnDicPage", "showIDTooltip", "showResAnchorTooltip", "showResNumberTooltip", "showResHandleTooltip", 
+					"classificationID", "classificationResNumber", "addToOnePage"]);
 		insertStyle();
 		$("#bbs dl").attr("id", "bbsmain");
 		$(".border").remove();

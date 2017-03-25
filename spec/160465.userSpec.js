@@ -1594,9 +1594,9 @@ describe("", function(){
 
 		describe("initPagerのテスト", function(){
 
-			describe('withOnlyOnePageがtrueのとき', function(){
+			describe('addToOnePageがtrueのとき', function(){
 				beforeEach(function(){
-					GM_setValue('withOnlyOnePage', true);
+					GM_setValue('addToOnePage', true);
 				});
 
 				describe("掲示板が3ページあるとき", function(){
@@ -1770,9 +1770,9 @@ describe("", function(){
 				});
 			});
 
-			describe('withOnlyOnePageがtrueのとき', function(){
+			describe('addToOnePageがfalseのとき', function(){
 				beforeEach(function(){
-					GM_setValue('withOnlyOnePage', false);
+					GM_setValue('addToOnePage', false);
 				});
 
 				it('pagerは変更されない', function(){
@@ -1791,7 +1791,8 @@ describe("", function(){
 					//exeicise
 					sut.initPager();
 					//verify
-					//途中　ここから
+					expect($('#bbs .pager:eq(0)').html()).toEqual(navi1 + pager + navi2.replace('&#187;', '»'));
+					expect($('#bbs .pager:eq(1)').html()).toEqual(navi1 + pager + navi2.replace('&#187;', '»'));
 				});
 			});
 		});
@@ -1812,6 +1813,7 @@ describe("", function(){
 				var nowUrl = "http://dic.nicovideo.jp/a/bbs";
 				spyOn(urlAnalyzer, "getNowUrl").and.returnValue(nowUrl);
 				sut = new c.ManagerToReadBbs(urls, urlAnalyzer);
+				GM_setValue("addToOnePage", true);
 				GM_setValue("tooltipOnDicPage", true);
 				GM_setValue("showIDTooltip", true);
 				GM_setValue("showResAnchorTooltip", true);
@@ -1878,6 +1880,7 @@ describe("", function(){
 				spyOn($, "get").and.callFake(function(url, callback){
 					callback(html);
 				});
+				GM_setValue("addToOnePage", true);
 			});
 
 			afterEach(function(){
@@ -2030,6 +2033,7 @@ describe("", function(){
 				spyOn($, "get").and.callFake(function(url, callback){
 					callback(html);
 				});
+				GM_setValue("addToOnePage", true);
 			});
 
 			afterEach(function(){
@@ -2460,7 +2464,7 @@ describe("", function(){
 			it("設定が全てtrueのとき、設定のチェックボックスが追加されて、全てにチェックがついている", function(){
 				//exercise
 				setFlag(["autoLoad", "useNG", "seethroughNG", "tooltipOnDicPage", "showIDTooltip", "showResAnchorTooltip", "showResNumberTooltip",
-					"showResHandleTooltip",	"classificationID", "classificationResNumber", "withOnlyOnePage"]);
+					"showResHandleTooltip",	"classificationID", "classificationResNumber", "addToOnePage"]);
 				//exercise
 				sut.insertConfigHtml();
 				//verify
