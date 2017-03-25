@@ -8,6 +8,12 @@
 // @include http://dic.nicovideo.jp/v/*
 // @include http://dic.nicovideo.jp/i/*
 // @include http://dic.nicovideo.jp/u/*
+// @include https://dic.nicovideo.jp/a/*
+// @include https://dic.nicovideo.jp/b/*
+// @include https://dic.nicovideo.jp/l/*
+// @include https://dic.nicovideo.jp/v/*
+// @include https://dic.nicovideo.jp/i/*
+// @include https://dic.nicovideo.jp/u/*
 // @require http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js
 // @grant GM_getValue
 // @grant GM_setValue
@@ -24,7 +30,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 	};
 
 	UrlAnalyzer.prototype.inArticlePage = function(){
-		return this.getNowUrl().indexOf("http://dic.nicovideo.jp/b/") === -1;
+		return this.getNowUrl().indexOf("//dic.nicovideo.jp/b/") === -1;
 	};
 
 	UrlAnalyzer.prototype.getBBSURLs = function(pager){
@@ -84,8 +90,8 @@ var net_threeaster_NicoDicBBSViewer = {};
 	}
 
 	UrlAnalyzer.prototype.getPageType = function(url) {
-		if(url.indexOf('http://dic.nicovideo.jp') !== -1){
-			url = url.replace('http://dic.nicovideo.jp', '');
+		if(url.indexOf('//dic.nicovideo.jp') !== -1){
+			url = url.replace('//dic.nicovideo.jp', '');
 		}
 		var parts = url.split('/');
 		if(parts[1] === 'b'){
