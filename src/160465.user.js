@@ -14,7 +14,7 @@
 // @include https://dic.nicovideo.jp/v/*
 // @include https://dic.nicovideo.jp/i/*
 // @include https://dic.nicovideo.jp/u/*
-// @require http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js
+// @require https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js
 // @grant GM_getValue
 // @grant GM_setValue
 // @version 1.1.0
