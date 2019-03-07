@@ -245,6 +245,9 @@ var net_threeaster_NicoDicBBSViewer = {};
 				return "";
 			}
 		}
+        var insertFractionIntoDiv = function(html, fraction){
+            return html.replace('</div>', fraction + '</div>')
+        }
 		var sameIDRes = resListById[this.reshead.attr("data-id")];
 		if(reflectSameId){
 			var addIDMulti = "IDMulti";
@@ -259,10 +262,10 @@ var net_threeaster_NicoDicBBSViewer = {};
 				s[s.length - 2] = s[s.length - 2].replace("ID", "<div class='ID'>ID</div>");
 			}else if(sameIDRes.length < 5){
 				s[s.length - 2] = s[s.length - 2].replace("ID", "<div class='" + addIDMulti + "'>ID</div>");
-				s[s.length - 1] += addOrdinalAndTotal(this, sameIDRes);
+				s[s.length - 1] = insertFractionIntoDiv(s[s.length - 1], addOrdinalAndTotal(this, sameIDRes));
 			}else{
 				s[s.length - 2] = s[s.length - 2].replace("ID", "<div class='" + addIDMany + "'>ID</div>");
-				s[s.length - 1] += addOrdinalAndTotal(this, sameIDRes);
+				s[s.length - 1] = insertFractionIntoDiv(s[s.length - 1], addOrdinalAndTotal(this, sameIDRes));
 			}
 			this.reshead.html(s.join(":"));
 		}else if(this.reshead.find(".ID").size() !== 0){
@@ -270,12 +273,12 @@ var net_threeaster_NicoDicBBSViewer = {};
 			}else if(sameIDRes.length < 5){
 				this.reshead.find(".ID, .IDMulti, .IDMany").removeClass("ID IDMulti IDMany").addClass(addIDMulti);
 				var s = this.reshead.html().split(":");
-				s[s.length - 1] += addOrdinalAndTotal(this, sameIDRes);
+				s[s.length - 1] = insertFractionIntoDiv(s[s.length - 1], addOrdinalAndTotal(this, sameIDRes));
 				this.reshead.html(s.join(":"));
 			}else{
 				this.reshead.find(".ID, .IDMulti, .IDMany").removeClass("ID IDMulti IDMany").addClass(addIDMany);
 				var s = this.reshead.html().split(":");
-				s[s.length - 1] += addOrdinalAndTotal(this, sameIDRes);
+				s[s.length - 1] = insertFractionIntoDiv(s[s.length - 1], addOrdinalAndTotal(this, sameIDRes));
 				this.reshead.html(s.join(":"));
 			}
 		}else{
