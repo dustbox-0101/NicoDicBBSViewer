@@ -128,14 +128,14 @@ var net_threeaster_NicoDicBBSViewer = {};
 		}else{
 			this.urlAnalyzer = ana;
 		}
-		
+
 	}
 
 	ResCollection.prototype.createResList =  function(dl){
 		dl.find("dt").each(function(){
 			var self = $(this);
 			self.attr("data-number", self.find("a").eq(0).attr("name"));
-			self.attr("data-name", self.find("span").text());
+			self.attr("data-name", self.find(".st-bbs_name").text());
 			var id = self.text().split(":");
 			id = id[id.length - 1].split("[");
 			id = id[0];
@@ -191,7 +191,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 	};
 
 	ResCollection.prototype.showRes = function(){
-		var dl = $("#bbs dl");
+		var dl = $(".st-bbs-contents dl");
 		for(var i = 0; i < this.resList.length; i++){
 			dl.append(this.resList[i].reshead);
 			dl.append(this.resList[i].resbody);
@@ -210,7 +210,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 	ResCollection.prototype.setContextMenu = function(){
 		for(var i = 0; i < this.resList.length; i++){
 			this.resList[i].reshead.find(".ID, .IDMulti, .IDMany").unbind("click").click(function(e){
-				$(this).parent(".reshead").append($("#contextMenu").css({left : e.pageX, top : e.pageY}).show());
+				$(this).parent(".st-bbs_resInfo").append($("#contextMenu").css({left : e.pageX, top : e.pageY}).show());
 				e.stopPropagation();
 			});
 		}
@@ -292,7 +292,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 			}
 		}
 	}
-	
+
 	Res.prototype.makeNumberDiv = function(resList){
 		this.linkedResponds = [];
 		var myNumber = this.reshead.attr("data-number") - 0;
@@ -352,7 +352,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 
 	Res.prototype.makeNumTooltip = function(resListByNumber){
 		var that = this;
-		this.resbody.find(".numTooltip > a.dic").unwrap(); 
+		this.resbody.find(".numTooltip > a.dic").unwrap();
 		this.resbody.find("a.dic").filter(function(){return $(this).html().indexOf("&gt;&gt;") !== -1}).each(function(){
 			var self = $(this);
 			var num = self.html().split("&gt;").join("").split("-");
@@ -394,7 +394,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 			});
 		});
 	};
-	
+
 	Res.prototype.makeLinkedNumberTooltip = function(){
 		var divNumber = this.reshead.find("div[class^='Number']");
 		var linkedResponds = this.linkedResponds;
@@ -412,9 +412,9 @@ var net_threeaster_NicoDicBBSViewer = {};
 			divNumber.find("div").remove();
 		});
 	}
-	
+
 	Res.prototype.makeNumberHandleTooltip = function(resListByNumber){
-		var nameSpan = this.reshead.find(".name");
+		var nameSpan = this.reshead.find(".st-bbs_name");
 		var name = nameSpan.html();
 		var transformedName = name.replace(/[０１２３４５６７８９]/g, function(c){return "０１２３４５６７８９".indexOf(c);});
 		var that = this;
@@ -586,10 +586,10 @@ var net_threeaster_NicoDicBBSViewer = {};
 		var self = this;
 		$("#ngidMenu").click(function(){
 			$("#contextMenu").hide();
-			if($(this).parents(".reshead").hasClass("deleted")){
+			if($(this).parents(".st-bbs_reshead").hasClass("deleted")){
 				return false;
 			}
-			var id = $(this).parents(".reshead").attr("data-id");
+			var id = $(this).parents(".st-bbs_reshead").attr("data-id");
 			var gm_ngid = GM_getValue("ngid") ? GM_getValue("ngid") : "";
 			var ngidText = gm_ngid + "\n" + id;
 			ngidText = removeUselessLines(ngidText);
@@ -601,10 +601,10 @@ var net_threeaster_NicoDicBBSViewer = {};
 
 		$("#ngnameMenu").click(function(){
 			$("#contextMenu").hide();
-			if($(this).parents(".reshead").hasClass("deleted")){
+			if($(this).parents(".st-bbs_reshead").hasClass("deleted")){
 				return false;
 			}
-			var name = $(this).parents(".reshead").attr("data-name");
+			var name = $(this).parents(".st-bbs_reshead").attr("data-name");
 			var gm_ngname = GM_getValue("ngname") ? GM_getValue("ngname") : "";
 			var ngnameText = gm_ngname + "\n" + name;
 			ngnameText = removeUselessLines(ngnameText);
@@ -616,10 +616,10 @@ var net_threeaster_NicoDicBBSViewer = {};
 
 		$("#ngresMenu").click(function(){
 			$("#contextMenu").hide();
-			if($(this).parents(".reshead").hasClass("deleted")){
+			if($(this).parents(".st-bbs_reshead").hasClass("deleted")){
 				return false;
 			}
-			var number = $(this).parents(".reshead").attr("data-number");
+			var number = $(this).parents(".st-bbs_reshead").attr("data-number");
 			var gm_ngresText = GM_getValue("ngres") ? GM_getValue("ngres") : "";
 			var pageName = self.urlAnalyzer.getNowPageName();
 			var ngresText = gm_ngresText + "\n" + pageName + ":" + number;
@@ -656,7 +656,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 			return $('<ul style="list-style-type: none; margin-left:5px;"></ul>');
 		}
 		$("#topbarLogoutMenu").after('<li>NicoDicBBSViewer</li><li id="bbsLi" class="selected"><a href="#">掲示板を表示する</a></li><li id="ngLi"><a href="#">設定画面を表示する</a></li>');
-		$("#bbs").after('<div id="ng"></div>');
+		$(".st-bbs-contents").after('<div id="ng"></div>');
 		appendNgTextarea("NGID", "ngid");
 		appendNgTextarea("NGName", "ngname");
 		appendNgTextarea("NGワード", "ngword");
@@ -686,21 +686,21 @@ var net_threeaster_NicoDicBBSViewer = {};
 		appendConfigLi(colorUl, "classificationResNumber", "参照されているレス番を色分けする");
 		appendSubList(parentUl, colorUl, "色分け(更新時有効)");
 
-		$("#ng").append('<button id="decideNG">保存</button>　<button id="cancelNG">キャンセル</button>　<button id="backToBbsButton">掲示板に戻る</button></div>' + 
+		$("#ng").append('<button id="decideNG">保存</button>　<button id="cancelNG">キャンセル</button>　<button id="backToBbsButton">掲示板に戻る</button></div>' +
 			' <ul id="contextMenu"><li id="ngidMenu">NGIDに追加</li><li id="ngnameMenu">NGNameに追加</li><li id="ngresMenu">このレスを削除</li></ul>');
 	};
 
 	MenuOperator.prototype.bindMenu = function(){
 		var self = this;
-		var contents = $("#bbs, #ng");
+		var contents = $(".st-bbs-contents, #ng");
 		var backBBS = function(){
 			if($(".selected").attr("id") === "bbsLi"){
 				self.bbsScroll = $("html").scrollTop();
 			}
 			$(".selected").removeClass("selected");
 			$("#bbsLi").addClass("selected");
-			contents.not("#bbs").css("display", "none");
-			$("#bbs").css("display", "block");
+			contents.not(".st-bbs-contents").css("display", "none");
+			$(".st-bbs-contents").css("display", "block");
 			$("html").scrollTop(self.bbsScroll);
 			return false;
 		};
@@ -718,11 +718,11 @@ var net_threeaster_NicoDicBBSViewer = {};
 			$("html").scrollTop($("#ng").offset().top - $("#topline").height());
 			return false;
 		});
-		
+
 		var setcbConfig = function(id){
 			GM_setValue(id, $("#" + id + "Checkbox").is(":checked"));
 		}
-		
+
 		var checkcbConfig = function(id){
 			if(GM_getValue(id)){
 				$("#" + id + "Checkbox").attr("checked", true);
@@ -752,7 +752,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 			self.ngOperator.initNg();
 			self.ngOperator.applyNg(self.resCollection.resList);
 		});
-		
+
 		$("#cancelNG").click(function(){
 			$("#ngidTextarea").val(GM_getValue("ngid") ? GM_getValue("ngid") : "");
 			$("#ngnameTextarea").val(GM_getValue("ngname") ? GM_getValue("ngname") : "");
@@ -819,7 +819,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 
 	ManagerToReadBbs.prototype.prependBbs = function(dl){
 		this.resCollection.revivalAllRes();
-		$("#bbs dl").prepend(dl.contents());
+		$(".st-bbs-contents dl").prepend(dl.contents());
 		this.createAndSetResList();
 		$("#loading").remove();
 		this.isNowLoading = false;
@@ -843,7 +843,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 
 	ManagerToReadBbs.prototype.appendBbs = function(dl){
 		this.resCollection.revivalAllRes();
-		$("#bbs dl").append(dl.contents());
+		$(".st-bbs-contents dl").append(dl.contents());
 		this.createAndSetResList();
 		$("#loading").remove();
 		this.isNowLoading = false;
@@ -862,7 +862,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 		if(!GM_getValue("addToOnePage")){
 			return;
 		}
-		var pager = $("#bbs .pager");
+		var pager = $(".st-bbs-contents .pager");
 		var self = this;
 		if(this.urlAnalyzer.inArticlePage()){
 			pager.find(".navi").remove();
@@ -897,7 +897,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 	};
 
 	ManagerToReadBbs.prototype.createAndSetResList = function(){
-		this.resCollection.createResList($("#bbs dl"));
+		this.resCollection.createResList($(".st-bbs-contents dl"));
 		this.resCollection.createResListById();
 		this.resCollection.createResListByNumber();
 		this.resCollection.makeTooltips();
@@ -920,7 +920,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 		var storage = {};
 		for(var i = 0; i < lines.length;){
 			if(!lines[i] || lines[i] in storage){
-				lines.splice(i, 1);	
+				lines.splice(i, 1);
 			}else{
 				storage[lines[i]] = 0;
 				i++;
@@ -928,7 +928,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 		}
 		return lines.join("\n");
 	};
-	
+
 	var initConfig = function(ids){
 		for(var i = 0; i < ids.length; i++){
 			if(GM_getValue(ids[i]) === undefined){
@@ -945,18 +945,18 @@ var net_threeaster_NicoDicBBSViewer = {};
 		var insideTooltipStyle = ".dic{display:inline;}";
 		var onMouseIdStyle = ".ID:hover, .IDMulti:hover, .IDMany:hover, .dic:hover{text-decoration:none;}";
 		var defaultTooltipStyle = ".ID>div, .IDMulti>div, .IDMany>div, .dic>div, .Number>div, .NumberMulti>div, .NumberMany>div, .NumberHandle>div{display:none;}";
-		var onMouseTooltipStyle = ".ID:hover>div, .IDMulti:hover>div, .IDMany:hover>div, .numTooltip:hover>div," + 
-								" .Number:hover>div, .NumberMulti:hover>div, .NumberMany:hover>div, .NumberHandle:hover>div" + 
-								"{color:black; display:inline; position:absolute; background:#f5f5b5; border:solid black 1px; padding;5px; font-size:8pt; overflow:auto;" + 
+		var onMouseTooltipStyle = ".ID:hover>div, .IDMulti:hover>div, .IDMany:hover>div, .numTooltip:hover>div," +
+								" .Number:hover>div, .NumberMulti:hover>div, .NumberMany:hover>div, .NumberHandle:hover>div" +
+								"{color:black; display:inline; position:absolute; background:#f5f5b5; border:solid black 1px; padding;5px; font-size:8pt; overflow:auto;" +
 								" box-shadow:1px 1px; z-index:10000;}";
 		var leftboxStyle = "div.left-box{border: groove 1px gray; border-radius: 5px; background-image:none;}";
 		var ngStyle = "#ng{display:none;}";
-		var hideMenu = "#topbarRightMenu #bbsLi.selected,#topbarRightMenu #ngLi.selected{display:none;}"; 
+		var hideMenu = "#topbarRightMenu #bbsLi.selected,#topbarRightMenu #ngLi.selected{display:none;}";
 		var sidemenu = "ul#sidemenu li{border:solid 1px; width:100px;} ul#sidemenu li.selected{color:red;}";
 		var contextMenuStyle = "#contextMenu{background : #d4d0c8;color : #000000;display : none;position : absolute;list-style : none;	padding-left : 0px;box-shadow : 1px 1px;}";
 		var contextItemStyle = "#contextMenu li{padding : 3px;}#contextMenu li:hover{background : #0a246a;color : #ffffff;}";
 
-		var styleTag = "<style id='nicoDicBBSViewerCSS' type='text/css'>" + idStyle + numberStyle + insideTooltipStyle + onMouseIdStyle + defaultTooltipStyle + 
+		var styleTag = "<style id='nicoDicBBSViewerCSS' type='text/css'>" + idStyle + numberStyle + insideTooltipStyle + onMouseIdStyle + defaultTooltipStyle +
 			onMouseTooltipStyle + leftboxStyle + ngStyle + hideMenu + sidemenu + contextMenuStyle + contextItemStyle + "</style>";
 
 		$("link").last().after($(styleTag));
@@ -970,18 +970,18 @@ var net_threeaster_NicoDicBBSViewer = {};
 
 //以下main
 	var main = function(ana){
-		initConfig(["useNG", "addToOnePage", "autoLoad", "tooltipOnDicPage", "showIDTooltip", "showResAnchorTooltip", "showResNumberTooltip", "showResHandleTooltip", 
+		initConfig(["useNG", "addToOnePage", "autoLoad", "tooltipOnDicPage", "showIDTooltip", "showResAnchorTooltip", "showResNumberTooltip", "showResHandleTooltip",
 					"classificationID", "classificationResNumber", "addToOnePage"]);
 		insertStyle();
-		$("#bbs dl").attr("id", "bbsmain");
+		$(".st-bbs-contents dl").attr("id", "bbsmain");
 		$(".border").remove();
 		if(ana === undefined){
 			var urlAnalyzer = new UrlAnalyzer();
 		}else{
 			var urlAnalyzer = ana;
 		}
-		
-		var manager = new ManagerToReadBbs(urlAnalyzer.getBBSURLs($("#bbs .pager").eq(0)), urlAnalyzer);
+
+		var manager = new ManagerToReadBbs(urlAnalyzer.getBBSURLs($(".st-bbs-contents .pager").eq(0)), urlAnalyzer);
 		manager.initSmallBbs();
 		counterAutopagerize();
 		if(!urlAnalyzer.inArticlePage()){
@@ -1003,6 +1003,6 @@ var net_threeaster_NicoDicBBSViewer = {};
 
 	//-----main実行/テスト時には途中で止まる-----
 	if(typeof GM_getValue === 'function'){
-		main();	
+		main();
 	}
 })(jQuery);
