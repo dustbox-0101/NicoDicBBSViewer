@@ -17,7 +17,7 @@
 // @require https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js
 // @grant GM_getValue
 // @grant GM_setValue
-// @version 1.1.2
+// @version 1.2.0
 // ==/UserScript==
 $.noConflict();
 var net_threeaster_NicoDicBBSViewer = {};
