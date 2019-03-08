@@ -326,11 +326,11 @@ var net_threeaster_NicoDicBBSViewer = {};
 		this.reshead.find("div.Number, div.NumberMulti, div.NumberMany").contents().unwrap();
 		if(this.linkedResponds.length === 0){
 		}else if(!GM_getValue("classificationResNumber") || this.linkedResponds.length === 1){
-			this.reshead.html(this.reshead.html().replace(/a>([0-9]+)/, "a><div class='Number'>$1</div>"));
+            this.reshead.find('.st-bbs_resNo').html("<div class='Number'>" + this.reshead.find('.st-bbs_resNo').html() + "</div>")
 		}else if(this.linkedResponds.length <= 3){
-			this.reshead.html(this.reshead.html().replace(/a>([0-9]+)/, "a><div class='NumberMulti'>$1</div>"));
+            this.reshead.find('.st-bbs_resNo').html("<div class='NumberMulti'>" + this.reshead.find('.st-bbs_resNo').html() + "</div>")
 		}else{
-			this.reshead.html(this.reshead.html().replace(/a>([0-9]+)/, "a><div class='NumberMany'>$1</div>"));
+            this.reshead.find('.st-bbs_resNo').html("<div class='NumberMany'>" + this.reshead.find('.st-bbs_resNo').html() + "</div>")
 		}
 	}
 
