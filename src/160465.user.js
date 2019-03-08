@@ -952,7 +952,7 @@ var net_threeaster_NicoDicBBSViewer = {};
 		var onMouseTooltipStyle = ".ID:hover>div, .IDMulti:hover>div, .IDMany:hover>div, .numTooltip:hover>div," +
 								" .Number:hover>div, .NumberMulti:hover>div, .NumberMany:hover>div, .NumberHandle:hover>div" +
 								"{color:black; display:inline; position:absolute; background:#f5f5b5; border:solid black 1px; padding;5px; font-size:8pt; overflow:auto;" +
-								" box-shadow:1px 1px; z-index:10000;}";
+								" box-shadow:1px 1px; z-index:10000;font-weight:normal;}";
 		var leftboxStyle = "div.left-box{border: groove 1px gray; border-radius: 5px; background-image:none;}";
 		var ngStyle = "#ng{display:none;}";
 		var hideMenu = "#topbarRightMenu #bbsLi.selected,#topbarRightMenu #ngLi.selected{display:none;}";
