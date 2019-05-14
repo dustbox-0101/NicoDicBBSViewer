@@ -17,7 +17,7 @@
 // @require https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js
 // @grant GM_getValue
 // @grant GM_setValue
-// @version 1.2.0
+// @version 1.2.1
 // ==/UserScript==
 $.noConflict();
 var net_threeaster_NicoDicBBSViewer = {};
@@ -456,15 +456,6 @@ var net_threeaster_NicoDicBBSViewer = {};
 			tooltip.offset({top : a});
 			tooltip.height(c - $("#topline").height());
 		}
-	};
-	Res.prototype.changeLink = function(){
-		var self = this;
-		this.resbody.find("a.dic").each(function(){
-			if(self.urlAnalyzer.isPageOf($(this).attr('href'))){
-				$(this).removeAttr("target");
-				$(this).attr("href", self.urlAnalyzer.changeNumber($(this).attr("href")));
-			}
-		});
 	};
 
 	//-----NgOperator-----
@@ -908,7 +899,6 @@ var net_threeaster_NicoDicBBSViewer = {};
 		this.resCollection.setContextMenu();
 		var resList = this.resCollection.resList;
 		for(var i = 0; i < resList.length; i++){
-			resList[i].changeLink();
 			resList[i].backupRes();
 		}
 		this.ngOperator.applyNg(resList);
