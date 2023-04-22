@@ -1,23 +1,12 @@
 // ==UserScript==
-// @name NicoDicBBSViewer
-// @description ニコニコ大百科のBBSの拡張
-// @namespace http://threeaster.net
-// @include http://dic.nicovideo.jp/a/*
-// @include http://dic.nicovideo.jp/b/*
-// @include http://dic.nicovideo.jp/l/*
-// @include http://dic.nicovideo.jp/v/*
-// @include http://dic.nicovideo.jp/i/*
-// @include http://dic.nicovideo.jp/u/*
-// @include https://dic.nicovideo.jp/a/*
-// @include https://dic.nicovideo.jp/b/*
-// @include https://dic.nicovideo.jp/l/*
-// @include https://dic.nicovideo.jp/v/*
-// @include https://dic.nicovideo.jp/i/*
-// @include https://dic.nicovideo.jp/u/*
-// @require https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js
-// @grant GM_getValue
-// @grant GM_setValue
-// @version 1.2.1
+// @name          NicoDicBBSViewer
+// @description   ニコニコ大百科のBBSの拡張
+// @namespace     http://threeaster.net
+// @include       /^https?:\/\/dic\.nicovideo\.jp\/[a-z]\/.*$/
+// @require       https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js
+// @grant         GM_getValue
+// @grant         GM_setValue
+// @version       0.0.1
 // ==/UserScript==
 $.noConflict();
 var net_threeaster_NicoDicBBSViewer = {};
