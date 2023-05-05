@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name          NicoDicBBSViewer 改造版
 // @description   ニコニコ大百科のBBSの拡張
-// @namespace     http://threeaster.nico
+// @namespace     http://threeaster.net
 // @author        threeaster *** ほか (U+2042)
 // @include       /^https?:\/\/dic\.nicovideo\.jp\/[a-z]\/.*$/
 // @require       https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.6.4.slim.min.js
