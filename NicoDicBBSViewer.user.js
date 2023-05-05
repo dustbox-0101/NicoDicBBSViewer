@@ -30,6 +30,9 @@
 		}
 		div.left-box {border:groove 1px gray; border-radius:5px; background-image:none;}
 		#ng {display:none; background:#f0f0f0; padding:.3rem;}
+		#ng article { display:flex; flex-wrap:wrap; }
+		#ng article section { display:flex; flex-direction:column; width:calc(25% - 0.2rem); padding:.1rem; }
+		#ng textarea { width:94%; height:10rem; }
 		#topbarRightMenu #bbsLi.selected, #topbarRightMenu #ngLi.selected {display:none;}
 		ul#sidemenu li {border:solid 1px; width:100px;}
 		ul#sidemenu li.selected {color:red;}
@@ -46,6 +49,8 @@
 		#bbsViewerMenu a {cursor:pointer; display:block; padding:.2rem .5rem;}
 		#bbsViewerMenu a:hover {background:#0a246a; color:#ffffff;}
 		#ngMenuControll{display:flex; justify-content:space-around;}
+		.res_reaction.deleted { display:inherit; padding:0; }
+		.res_reaction.deleted > * { display:none; }
 	`});
 
 	// NG文字列
@@ -521,6 +526,7 @@
 		get urlAnalyzer() { this.#_urlAnalyzer; }
 		get className() { return this.#_cls; }
 		get replaceText() { return this.#_replaceText; }
+		get defaultClassName() { return 'deleted'; }
 		constructor(ana) {
 			this.#_urlAnalyzer = ana ?? new UrlAnalyzer();
 			this.#_replaceText = GM_getValue(this.#_GM_replaceKey, '削除しました');
@@ -546,14 +552,16 @@
 					// NG設定
 					$('#contextMenu').insertAfter('#ng');
 					r.reshead.find('.st-bbs_name').html(this.replaceText);
-					r.reshead.find('.trip').addClass(this.className);
+					r.reshead.find('.trip').removeClass(this.defaultClassName).addClass(this.className);
 					if(seethroughNG.value) { r.reshead.find('.trip').html(''); }
-					r.reshead.addClass(this.className);
-					r.resbody.html(this.replaceText).addClass(this.className);
+					r.reshead.removeClass(this.defaultClassName).addClass(this.className);
+					r.resbody.html(this.replaceText).removeClass(this.defaultClassName).addClass(this.className);
+					r.resbody.next('.res_reaction').addClass('deleted');
 				} else if(r.reshead.hasClass(this.className)) {
 					// NG解除
 					r.reshead.removeClass(this.className).find('.st-bbs_name').html(r.name);
 					r.resbody.html('').append(r.body).removeClass(this.className);
+					r.resbody.next('.res_reaction').removeClass('deleted');
 				}
 			}
 			// -->| applyNg()
@@ -612,12 +620,12 @@
 		insertConfigHtml() {
 			let self = this;
 			let appendNgTextarea = function(labelcore, idcore) {
-				let $div = $('<div>').css({float: 'left', width: '24%'});
+				let $div = $('<section>');
 				let $label = $('<p>').text("改行で区切って" + labelcore + "を入力or削除してください。");
-				let $textarea = $('<textarea>').attr({id: idcore + 'Textarea', cols: '20', rows: '10', placeholder: labelcore + 'を改行で区切って入力してください。'});
+				let $textarea = $('<textarea>').attr({id: idcore + 'Textarea', placeholder: labelcore + 'を改行で区切って入力してください。'});
 				$textarea.val(eval(idcore + '.getString'));
 				$div.append($label).append($textarea);
-				$('#ng').append($div);
+				$('#ng > article').append($div);
 			}
 			let appendConfigLi = function(parent, id, label) {
 				let $li = $('<li>');
@@ -646,6 +654,7 @@
 			
 			// 設定画面
 			$('.st-bbs-contents').after($('<div>').attr('id', 'ng'));
+			$('#ng').append('<article>');
 			appendNgTextarea('NGID', 'ngid');
 			appendNgTextarea('NGName', 'ngname');
 			appendNgTextarea('NGワード', 'ngword');
