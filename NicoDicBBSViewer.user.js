@@ -8,7 +8,7 @@
 // @grant         GM_getValue
 // @grant         GM_setValue
 // @grant         GM_addElement
-// @version       0.0.1
+// @version       0.0.2
 // ==/UserScript==
 
 (function($){
@@ -521,16 +521,14 @@
 	class NgOperator {
 		#_GM_replaceKey = 'ngReplaceText';
 		#_replaceText = '削除しました';
-		#_cls = 'deleted';
 		#_urlAnalyzer;
 		get urlAnalyzer() { this.#_urlAnalyzer; }
-		get className() { return this.#_cls; }
 		get replaceText() { return this.#_replaceText; }
 		get defaultClassName() { return 'deleted'; }
+		get className() { return (seethroughNG.value)? this.defaultClassName: 'NG_del'; }
 		constructor(ana) {
 			this.#_urlAnalyzer = ana ?? new UrlAnalyzer();
 			this.#_replaceText = GM_getValue(this.#_GM_replaceKey, '削除しました');
-			if(!seethroughNG.value) { this.#_cls += '_visible'; }
 		}
 		applyNg(resList) {
 			for(let r of resList) {
