@@ -8,7 +8,7 @@
 // @grant         GM_getValue
 // @grant         GM_setValue
 // @grant         GM_addElement
-// @version       0.0.2
+// @version       0.1.0
 // ==/UserScript==
 
 (function($){
@@ -201,11 +201,13 @@
 			this.resbody = $dd;
 			this.#_urlAnalyzer = ana ?? new UrlAnalyzer();
 			// レス番号
-			this.#_origin.num = Number($dt.find('a[name]').eq(0).attr('name')) ?? 0;
+			//this.#_origin.num = Number($dt.find('a[name]').eq(0).attr('name')) ?? 0;
+			this.#_origin.num = Number($dt.data('res_no')) ?? 0;
 			// ID + トリップ
 			let $resinfo = $dt.find('.st-bbs_resInfo').eq(0).contents();
-			let id = $resinfo.text().split(':').pop().split('[')[0];
-			this.#_origin.id = id.trim();
+			//let id = $resinfo.get(0).innerText.split(':').pop().split('[')[0];
+			//this.#_origin.id = id.trim();
+			this.#_origin.id = $dt.data('id_hash');
 			if($resinfo.has('span.trip')) {
 				this.#_origin.trip = $resinfo.find('span.trip').text();
 			}
@@ -229,9 +231,6 @@
 				}
 				return '';
 			}
-			let insertFractionIntoDiv = function(html, fraction) {
-				return html.replace('</div>', fraction +'</div>');
-			}
 			let sameIDRes = resListById[this.id];
 			let addIDMulti = 'ID';
 			let addIDMany = 'ID';
@@ -243,20 +242,17 @@
 			const D_IDCLASSES = IDCLASSES.map(v => '.'+ v).join(', ');
 			if(this.reshead.find(D_IDCLASSES).length === 0) {
 				// 初期設定
-				let s = this.reshead.html().split(':');
-				s[s.length - 2] = s[s.length - 2].replace('ID', '<div class="ID">ID</div>');
-				if(sameIDRes.length !== 1) {
-					if(sameIDRes.length < 5) {
-						// 青 (5回以内)
-						s[s.length - 2] = s[s.length - 2].replace('class="ID"', 'class="'+ addIDMulti +'"');
-						s[s.length - 1] = insertFractionIntoDiv(s[s.length - 1], addOrdinalAndTotal(this, sameIDRes));
-					} else {
-						// 赤 (5回以上)
-						s[s.length - 2] = s[s.length - 2].replace('class="ID"', 'class="'+ addIDMany +'"');
-						s[s.length - 1] = insertFractionIntoDiv(s[s.length - 1], addOrdinalAndTotal(this, sameIDRes));
-					}
+				let $info = this.reshead.find('.st-bbs_resInfo');
+				let info_nodes = $info.contents().toArray();
+				let id_index = info_nodes.findIndex(n => (n.nodeType == Node.TEXT_NODE && n.nodeValue.indexOf('ID') != -1));
+				let s = $(info_nodes[id_index]).text();
+				s = s.replace('ID', '<div class="ID">ID</div>');
+				if(sameIDRes.length != 1) {
+					s = s.replace(this.id, this.id +' '+ addOrdinalAndTotal(this, sameIDRes));
+					s = s.replace('class="ID"', 'class="'+ (sameIDRes.length < 5 ? addIDMulti: addIDMany) +'"');
 				}
-				this.reshead.html(s.join(':'));
+				info_nodes[id_index] = s;
+				$info.empty().append(info_nodes);
 				// -->|
 			} else if(this.reshead.find('.ID').length !== 0) {
 				if(sameIDRes.length !== 1) {
@@ -266,7 +262,7 @@
 						this.reshead.find(D_IDCLASSES).removeClass(IDCLASSES).addClass(addIDMany);
 					}
 					let s = this.reshead.html().split(':');
-					s[s.length - 1] = insertFractionIntoDiv(s[s.length - 1], addOrdinalAndTotal(this, sameIDRes));
+					s[s.length - 1].replace(this.id, this.id +' '+ addOrdinalAndTotal(this, sameIDRes));
 					this.reshead.html(s.join(':'));
 				}
 				// -->|
@@ -277,7 +273,7 @@
 					this.reshead.find(D_IDCLASSES).removeClass(IDCLASSES).addClass(addIDMany);
 				}
 				let s = this.reshead.html().split('[');
-				s[s.length - 1] = addOrdinalAndTotal(this, sameIDRes);
+				s[s.length - 1].replace(this.id, this.id +' '+ addOrdinalAndTotal(this, sameIDRes));
 				this.reshead.html(s.join(''));
 			}
 			// -->| makeIDDiv()
@@ -587,7 +583,7 @@
 				$('#contextMenu').hide();
 				if($(this).closest('.st-bbs_reshead').hasClass(self.ngOperator.className)) { return false; }
 				// ID追加
-				let id = $(this).closest('.st-bbs_reshead').attr('data-id');
+				let id = $(this).closest('.st-bbs_reshead').data('id_hash');
 				ngid.add(id);
 				$('#ngidTextarea').val(ngid.getString);
 				self.ngOperator.applyNg(self.resCollection.resList);
@@ -608,7 +604,7 @@
 				if($(this).closest('.st-bbs_reshead').hasClass(self.ngOperator.className)) { return false; }
 				// レス追加
 				let pageName = self.urlAnalyzer.getNowPageName();
-				let number = $(this).closest('.st-bbs_reshead').attr('data-number');
+				let number = $(this).closest('.st-bbs_reshead').data('res_no');
 				ngres.add(pageName + ":" + number);
 				$('#ngresTextarea').val(ngres.getString);
 				self.ngOperator.applyNg(self.resCollection.resList);
