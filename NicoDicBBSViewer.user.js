@@ -386,6 +386,7 @@
 					// -->| .on(mouseenter)
 				}).on('mouseleave', function() { $(this).find('div').remove(); });
 			});
+			this.#_origin.body = this.resbody.clone(true).contents();
 			// -->| makeNumTooltip()
 		}
 		makeLinkedNumberTooltip() {
@@ -545,7 +546,7 @@
 				if(applied) {
 					// NG設定
 					$('#contextMenu').insertAfter('#ng');
-					r.reshead.find('.st-bbs_name').html(this.replaceText);
+					r.reshead.find('.st-bbs_name:first-child').html(this.replaceText);
 					r.reshead.find('.trip').removeClass(this.defaultClassName).addClass(this.className);
 					if(seethroughNG.value) { r.reshead.find('.trip').html(''); }
 					r.reshead.removeClass(this.defaultClassName).addClass(this.className);
@@ -553,7 +554,7 @@
 					r.resbody.next('.res_reaction').addClass('deleted');
 				} else if(r.reshead.hasClass(this.className)) {
 					// NG解除
-					r.reshead.removeClass(this.className).find('.st-bbs_name').html(r.name);
+					r.reshead.removeClass(this.className).find('.st-bbs_name:first-child').html(r.name);
 					r.resbody.html('').append(r.body).removeClass(this.className);
 					r.resbody.next('.res_reaction').removeClass('deleted');
 				}
