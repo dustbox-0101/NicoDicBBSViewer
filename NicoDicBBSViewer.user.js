@@ -8,7 +8,7 @@
 // @grant         GM_getValue
 // @grant         GM_setValue
 // @grant         GM_addElement
-// @version       0.1.0
+// @version       0.1.1
 // ==/UserScript==
 
 (function($){
@@ -212,7 +212,7 @@
 				this.#_origin.trip = $resinfo.find('span.trip').text();
 			}
 			// 名前
-			this.#_origin.name = $dt.find('.st-bbs_name').text();
+			this.#_origin.name = $dt.find('.st-bbs_name').eq(0).text();
 			// 本文
 			this.#_origin.body = $dd.clone(true).contents();
 			this.#_origin.text = $dd.text();
@@ -405,7 +405,7 @@
 			// -->| makeLinkedNumberTooltip()
 		}
 		makeNumberHandleTooltip(resListByNumber) {
-			let $nameSpan = this.reshead.find('.st-bbs_name');
+			let $nameSpan = this.reshead.find('.st-bbs_name').eq(0);
 			let _name = $nameSpan.html();
 			let transformedName = _name.replace(/[０１２３４５６７８９]/g, function(c) { return "０１２３４５６７８９".indexOf(c); });
 			let self = this;
@@ -442,7 +442,7 @@
 			$dl.find('dt').each(function() {
 				let self = $(this);
 				self.attr('data-number', self.find('a').eq(0).attr('name'));
-				self.attr('data-name', self.find('.st-bbs_name').text());
+				self.attr('data-name', self.find('.st-bbs_name').eq(0).text());
 				let id = self.find('.st-bbs_resInfo').eq(0).text().split(":").pop();
 				id = id.split("[")[0];
 				self.attr('data-id', id);
@@ -494,7 +494,7 @@
 		revivalAllRes(className) {
 			for(const res of this.resList) {
 				if(res.reshead.hasClass(className)) {
-					res.reshead.removeClass(className).find('.st-bbs_name').html(res.name);
+					res.reshead.removeClass(className).find('.st-bbs_name').eq(0).html(res.name);
 					if(res.reshead.find('.trip').length !== 0) {
 						res.reshead.find('.trip').removeClass(className).html(res.trip);
 					}
@@ -546,7 +546,7 @@
 				if(applied) {
 					// NG設定
 					$('#contextMenu').insertAfter('#ng');
-					r.reshead.find('.st-bbs_name:first-child').html(this.replaceText);
+					r.reshead.find('.st-bbs_name').eq(0).html(this.replaceText);
 					r.reshead.find('.trip').removeClass(this.defaultClassName).addClass(this.className);
 					if(seethroughNG.value) { r.reshead.find('.trip').html(''); }
 					r.reshead.removeClass(this.defaultClassName).addClass(this.className);
@@ -554,7 +554,7 @@
 					r.resbody.next('.res_reaction').addClass('deleted');
 				} else if(r.reshead.hasClass(this.className)) {
 					// NG解除
-					r.reshead.removeClass(this.className).find('.st-bbs_name:first-child').html(r.name);
+					r.reshead.removeClass(this.className).find('.st-bbs_name').eq(0).html(r.name);
 					r.resbody.html('').append(r.body).removeClass(this.className);
 					r.resbody.next('.res_reaction').removeClass('deleted');
 				}
