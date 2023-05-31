@@ -8,7 +8,8 @@
 // @grant         GM_getValue
 // @grant         GM_setValue
 // @grant         GM_addElement
-// @version       0.1.0
+// @version       0.1.1
+// @updateURL     https://github.com/dustbox-0101/NicoDicBBSViewer/raw/remodel/NicoDicBBSViewer.user.js
 // ==/UserScript==
 
 (function($){
