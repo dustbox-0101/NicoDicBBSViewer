@@ -8,7 +8,7 @@
 // @grant         GM_getValue
 // @grant         GM_setValue
 // @grant         GM_addElement
-// @version       0.1.1
+// @version       0.1.2
 // ==/UserScript==
 
 (function($){
@@ -33,6 +33,8 @@
 		#ng article { display:flex; flex-wrap:wrap; }
 		#ng article section { display:flex; flex-direction:column; width:calc(25% - 0.2rem); padding:.1rem; }
 		#ng textarea { width:94%; height:10rem; }
+		#ng ul { list-style-type:none; }
+		#ng ul.ng-sublist { margin-left:5px; }
 		#topbarRightMenu #bbsLi.selected, #topbarRightMenu #ngLi.selected {display:none;}
 		ul#sidemenu li {border:solid 1px; width:100px;}
 		ul#sidemenu li.selected {color:red;}
@@ -444,7 +446,7 @@
 				self.attr('data-number', self.find('a').eq(0).attr('name'));
 				self.attr('data-name', self.find('.st-bbs_name').eq(0).text());
 				let id = self.find('.st-bbs_resInfo').eq(0).text().split(":").pop();
-				id = id.split("[")[0];
+				id = id.split("[")[0].replace(/[\r\n\s]/g, '').replace(/^([-\/\+\w]+).+/, '$1');;
 				self.attr('data-id', id);
 			});
 			let resheads = $dl.find('dt.st-bbs_reshead');
@@ -519,8 +521,15 @@
 		#_GM_replaceKey = 'ngReplaceText';
 		#_replaceText = '削除しました';
 		#_urlAnalyzer;
-		get urlAnalyzer() { this.#_urlAnalyzer; }
+		get urlAnalyzer() { return this.#_urlAnalyzer; }
+		get GMKey() { return this.#_GM_replaceKey; }
+		get defaultReplaceText() { return '削除しました'; }
 		get replaceText() { return this.#_replaceText; }
+		set replaceText(value) {
+			let _v = (0 < value.length)? value: this.defaultReplaceText;
+			this.#_replaceText = _v;
+			GM_setValue(this.#_GM_replaceKey, _v);
+		}
 		get defaultClassName() { return 'deleted'; }
 		get className() { return (seethroughNG.value)? this.defaultClassName: 'NG_del'; }
 		constructor(ana) {
@@ -625,8 +634,16 @@
 			let appendConfigLi = function(parent, id, label) {
 				let $li = $('<li>');
 				let $input = $('<input>').attr({type: 'checkbox', id: id + 'Checkbox'});
-				if(eval(id + '.value')) { $input.attr('checked', 'checked'); }
+				//if(eval(id + '.value')) { $input.attr('checked', 'checked'); }
+				$input.prop('checked', eval(id + '.value'));
 				$li.append($input).append(label);
+				parent.append($li);
+			}
+			let appendConNGTextLi = function(parent, id, label) {
+				let $li = $('<li>');
+				let $input = $('<input>').attr({type: 'text', id: id + 'Text'}).val(self.ngOperator.replaceText);
+				let $label = $('<label>').text(label).append($input);
+				$li.append($label);
 				parent.append($li);
 			}
 			let appendSubList = function(parent, list, label) {
@@ -634,7 +651,7 @@
 				$li.append(list);
 				parent.append($li);
 			}
-			let getSubUl = function() { return $('<ul>').css({listStyleType: 'none', marginLeft: '5px'}); }
+			let getSubUl = function() { return $('<ul>').addClass('ng-sublist'); }
 			// 設定トグル
 			let $link = $('<li>').append($('<a>').attr('href', '#'));
 			let $nav = $('<ul>').append($link.clone().attr('id', 'bbsLi').addClass('selected')).append($link.clone().attr('id', 'ngLi'));
@@ -655,12 +672,13 @@
 			appendNgTextarea('NGワード', 'ngword');
 			appendNgTextarea('NGレスを(BBSのURL:レス番号)の書式で', 'ngres');
 
-			let $form = $('<form>').append($('<ul>').css('list-style-type', 'none'));
-			$('#ng').append($('<div>').css('clear', 'left').append($form));
+			let $form = $('<form>').append($('<ul>'));
+			$('#ng').append($('<div>').append($form));
 			let parentUl = $('#ng form ul');
 			let ngUl = getSubUl();
 			appendConfigLi(ngUl, "useNG", "NG機能を使用する");
 			appendConfigLi(ngUl, "seethroughNG", "NGが適用されたレスを表示しない");
+			appendConNGTextLi(ngUl, this.ngOperator.GMKey, "NG適用で置き換える文章");
 			appendSubList(parentUl, ngUl, "NG機能");
 
 			appendConfigLi(parentUl, "tooltipOnDicPage", "記事ページでもID、番号の色分けやツールチップを表示する");
@@ -730,8 +748,15 @@
 			let setcbConfig = function(id) {
 				eval(id + '.value = ' + $('#' + id + 'Checkbox').is(':checked'));
 			}
+			let setNGtxtConfig = function(id) {
+				self.ngOperator.replaceText = $('#' + id + 'Text').val();
+			}
 			let checkcbConfig = function(id) {
 				$('#' + id + 'Checkbox').prop('checked', eval(id + '.value'));
+			}
+			let checkNGTxtConfig = function(id) {
+				let v = self.ngOperator.replaceText;
+				$('#' + id + 'Text').val(v);
 			}
 
 			$('#decideNG').on('click', function(e) {
@@ -755,6 +780,7 @@
 				setcbConfig("classificationID");
 				setcbConfig("classificationResNumber");
 				setcbConfig("switcherInTopMenu");
+				setNGtxtConfig(self.ngOperator.GMKey);
 				self.ngOperator.applyNg(self.resCollection.resList);
 			});
 
@@ -779,6 +805,7 @@
 				checkcbConfig("classificationID");
 				checkcbConfig("classificationResNumber");
 				checkcbConfig("switcherInTopMenu");
+				checkNGTxtConfig(self.ngOperator.GMKey);
 			});
 			// -->| bindMenu()
 		}
