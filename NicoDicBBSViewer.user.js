@@ -3,12 +3,13 @@
 // @description   ニコニコ大百科のBBSの拡張
 // @namespace     http://threeaster.net
 // @author        threeaster *** ほか (U+2042)
-// @include       /^https?:\/\/dic\.nicovideo\.jp\/[a-z]\/.*$/
+// @include       /^https:\/\/dic\.nicovideo\.jp\/[a-z]\/.*$/
 // @require       https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.6.4.slim.min.js
 // @grant         GM_getValue
 // @grant         GM_setValue
 // @grant         GM_addElement
-// @version       0.1.2
+// @version       0.1.3
+// @updateURL     https://github.com/dustbox-0101/NicoDicBBSViewer/raw/refs/heads/remodel/NicoDicBBSViewer.user.js
 // ==/UserScript==
 
 (function($){
@@ -34,7 +35,12 @@
 		#ng article section { display:flex; flex-direction:column; width:calc(25% - 0.2rem); padding:.1rem; }
 		#ng textarea { width:94%; height:10rem; }
 		#ng ul { list-style-type:none; }
-		#ng ul.ng-sublist { margin-left:5px; }
+		#ng ul li > span.li-title { display:block; font-weight:bold; }
+		#ng ul li.li-flex { padding-top:.2rem; }
+		#ng ul li.li-flex > label { display:inline-flex; align-items:flex-end; }
+		#ng ul li input[type="text"] { margin-left:1rem; }
+		#ng ul:not(.ng-sublist) > li { padding:.5rem 0; }
+		#ng ul.ng-sublist { margin-left:1rem; }
 		#topbarRightMenu #bbsLi.selected, #topbarRightMenu #ngLi.selected {display:none;}
 		ul#sidemenu li {border:solid 1px; width:100px;}
 		ul#sidemenu li.selected {color:red;}
@@ -64,6 +70,7 @@
 			this.#_values = GM_getValue(this.#_key, '').split("\n").map(t => t.trim()).filter(t => t.length != 0);
 		}
 		#toString() { return this.#_values.join("\n"); }
+		get key() { return this.#_key; }
 		get getString() { return this.#toString(); }
 		get getArray() { return this.#_values; }
 		setValues(txt) {
@@ -89,6 +96,7 @@
 			this.#_key = key;
 			this.#_value = (GM_getValue(this.#_key, 'true') === 'true');
 		}
+		get key() { return this.#_key; }
 		get value() { return this.#_value; }
 		set value(val) {
 			this.#_value = ((val === 'true') || (val === true));
@@ -203,18 +211,16 @@
 			this.resbody = $dd;
 			this.#_urlAnalyzer = ana ?? new UrlAnalyzer();
 			// レス番号
-			//this.#_origin.num = Number($dt.find('a[name]').eq(0).attr('name')) ?? 0;
 			this.#_origin.num = Number($dt.data('res_no')) ?? 0;
-			// ID + トリップ
-			let $resinfo = $dt.find('.st-bbs_resInfo').eq(0).contents();
-			//let id = $resinfo.get(0).innerText.split(':').pop().split('[')[0];
-			//this.#_origin.id = id.trim();
+			// ID
 			this.#_origin.id = $dt.data('id_hash');
-			if($resinfo.has('span.trip')) {
-				this.#_origin.trip = $resinfo.find('span.trip').text();
+			// トリップ
+			let $trip = $dt.find('span.trip');
+			if(0 < $trip.length) {
+				this.#_origin.trip = $trip.text().trim();
 			}
 			// 名前
-			this.#_origin.name = $dt.find('.st-bbs_name').eq(0).text();
+			this.#_origin.name = $dt.find('.st-bbs_name').eq(0).text().trim();
 			// 本文
 			this.#_origin.body = $dd.clone(true).contents();
 			this.#_origin.text = $dd.text();
@@ -556,14 +562,14 @@
 					// NG設定
 					$('#contextMenu').insertAfter('#ng');
 					r.reshead.find('.st-bbs_name').eq(0).html(this.replaceText);
-					r.reshead.find('.trip').removeClass(this.defaultClassName).addClass(this.className);
-					if(seethroughNG.value) { r.reshead.find('.trip').html(''); }
+					r.reshead.find('.trip').removeClass(this.defaultClassName).addClass(this.className).html('');
 					r.reshead.removeClass(this.defaultClassName).addClass(this.className);
 					r.resbody.html(this.replaceText).removeClass(this.defaultClassName).addClass(this.className);
 					r.resbody.next('.res_reaction').addClass('deleted');
 				} else if(r.reshead.hasClass(this.className)) {
 					// NG解除
 					r.reshead.removeClass(this.className).find('.st-bbs_name').eq(0).html(r.name);
+					r.reshead.find('.trip').removeClass(this.className).html(r.trip);
 					r.resbody.html('').append(r.body).removeClass(this.className);
 					r.resbody.next('.res_reaction').removeClass('deleted');
 				}
@@ -609,6 +615,20 @@
 				self.ngOperator.applyNg(self.resCollection.resList);
 			});
 			//
+			$('#ngtripMenu').off('click').on('click', function() {
+				$('#contextMenu').hide();
+				const $head = $(this).closest('.st-bbs_reshead');
+				if($head.hasClass(self.ngOperator.className)) { return false; }
+				// トリップ追加
+				let $trip = $head.find('span.trip');
+				if(0 < $trip.length) {
+					let trip = $trip.text().trim();
+					ngname.add(trip);
+					$('#ngnameTextArea').val(ngname.getString);
+					self.ngOperator.applyNg(self.resCollection.resList);
+				}
+			});
+			//
 			$('#ngresMenu').off('click').on('click', function() {
 				$('#contextMenu').hide();
 				if($(this).closest('.st-bbs_reshead').hasClass(self.ngOperator.className)) { return false; }
@@ -623,31 +643,31 @@
 		}
 		insertConfigHtml() {
 			let self = this;
-			let appendNgTextarea = function(labelcore, idcore) {
+
+			let appendNgTextarea = function(_label, _obj) {
 				let $div = $('<section>');
-				let $label = $('<p>').text("改行で区切って" + labelcore + "を入力or削除してください。");
-				let $textarea = $('<textarea>').attr({id: idcore + 'Textarea', placeholder: labelcore + 'を改行で区切って入力してください。'});
-				$textarea.val(eval(idcore + '.getString'));
+				let $label = $('<p>').text('改行で区切って'+ _label +'を入力or削除してください。');
+				let $textarea = $('<textarea>').attr({id: _obj.key +'Textarea', placeholder: _label +'を改行で区切って入力してください。'});
+				$textarea.val(_obj.getString).data('key', _obj.key);
 				$div.append($label).append($textarea);
 				$('#ng > article').append($div);
 			}
-			let appendConfigLi = function(parent, id, label) {
+			let appendConfigLi = function(_parent, _label, _obj) {
 				let $li = $('<li>');
-				let $input = $('<input>').attr({type: 'checkbox', id: id + 'Checkbox'});
-				//if(eval(id + '.value')) { $input.attr('checked', 'checked'); }
-				$input.prop('checked', eval(id + '.value'));
-				$li.append($input).append(label);
-				parent.append($li);
+				let $input = $('<input>').attr({type: 'checkbox', id: _obj.key +'Checkbox'});
+				$input.prop('checked', _obj.value);
+				$li.append($('<label>').append($input).append(_label));
+				_parent.append($li);
 			}
 			let appendConNGTextLi = function(parent, id, label) {
-				let $li = $('<li>');
+				let $li = $('<li>').addClass('li-flex');
 				let $input = $('<input>').attr({type: 'text', id: id + 'Text'}).val(self.ngOperator.replaceText);
-				let $label = $('<label>').text(label).append($input);
+				let $label = $('<label>').append($('<span>').text(label)).append($input);
 				$li.append($label);
 				parent.append($li);
 			}
 			let appendSubList = function(parent, list, label) {
-				let $li = $('<li>').text(label);
+				let $li = $('<li>').append($('<span>').addClass('li-title').text(label));
 				$li.append(list);
 				parent.append($li);
 			}
@@ -667,32 +687,33 @@
 			// 設定画面
 			$('.st-bbs-contents').after($('<div>').attr('id', 'ng'));
 			$('#ng').append('<article>');
-			appendNgTextarea('NGID', 'ngid');
-			appendNgTextarea('NGName', 'ngname');
-			appendNgTextarea('NGワード', 'ngword');
-			appendNgTextarea('NGレスを(BBSのURL:レス番号)の書式で', 'ngres');
+			appendNgTextarea('NGID', ngid);
+			appendNgTextarea('NGName', ngname);
+			appendNgTextarea('NGワード', ngword);
+			appendNgTextarea('NGレスを(BBSのURL:レス番号)の書式で', ngres);
 
 			let $form = $('<form>').append($('<ul>'));
 			$('#ng').append($('<div>').append($form));
 			let parentUl = $('#ng form ul');
 			let ngUl = getSubUl();
-			appendConfigLi(ngUl, "useNG", "NG機能を使用する");
-			appendConfigLi(ngUl, "seethroughNG", "NGが適用されたレスを表示しない");
+			appendConfigLi(ngUl, 'NG機能を使用する', useNG);
+			appendConfigLi(ngUl, 'NGが適用されたレスを表示しない', seethroughNG);
 			appendConNGTextLi(ngUl, this.ngOperator.GMKey, "NG適用で置き換える文章");
 			appendSubList(parentUl, ngUl, "NG機能");
 
-			appendConfigLi(parentUl, "tooltipOnDicPage", "記事ページでもID、番号の色分けやツールチップを表示する");
+			// TODO: 「更新時有効」を前提としても、とにかく処理を考える
+			// appendConfigLi(parentUl, '記事ページでもID、番号の色分けやツールチップを表示する', tooltipOnDicPage);
 
 			let tooltipUl = getSubUl();
-			appendConfigLi(tooltipUl, "showIDTooltip", 'ID(<span style="text-decoration:underline;">ID</span>)ツールチップを表示する');
-			appendConfigLi(tooltipUl, "showResAnchorTooltip", 'レスアンカー(<span style="color: rgb(0, 102, 204);">>>1</span>)ツールチップを表示する');
-			appendConfigLi(tooltipUl, "showResNumberTooltip", 'レス番(<span style="text-decoration:underline;">1</span>)ツールチップを表示する');
-			appendConfigLi(tooltipUl, "showResHandleTooltip", 'レス番ハンドル(<span style="color: rgb(0, 136, 0); font-weight: bold;">1</span>)ツールチップを表示する');
+			appendConfigLi(tooltipUl, 'ID(<span style="text-decoration:underline;">ID</span>)ツールチップを表示する', showIDTooltip);
+			appendConfigLi(tooltipUl, 'レスアンカー(<span style="color: rgb(0, 102, 204);">>>1</span>)ツールチップを表示する', showResAnchorTooltip);
+			appendConfigLi(tooltipUl, 'レス番(<span style="text-decoration:underline;">1</span>)ツールチップを表示する', showResNumberTooltip);
+			appendConfigLi(tooltipUl, 'レス番ハンドル(<span style="color: rgb(0, 136, 0); font-weight: bold;">1</span>)ツールチップを表示する', showResHandleTooltip);
 			appendSubList(parentUl, tooltipUl, "ツールチップ(更新時有効)");
 
 			let colorUl = getSubUl();
-			appendConfigLi(colorUl, "classificationID", "IDを色分けし、そのIDのレスの回数を表示する");
-			appendConfigLi(colorUl, "classificationResNumber", "参照されているレス番を色分けする");
+			appendConfigLi(colorUl, "IDを色分けし、そのIDのレスの回数を表示する", classificationID);
+			appendConfigLi(colorUl, "参照されているレス番を色分けする", classificationResNumber);
 			appendSubList(parentUl, colorUl, "色分け(更新時有効)");
 
 			$('#ng').append($('<div>').attr('id', 'ngMenuControll'));
@@ -704,13 +725,14 @@
 			let $ngControll = $('<ul>').attr('id', 'contextMenu');
 			$ngControll.append($('<li>').attr('id', 'ngidMenu').text('NGIDに追加'));
 			$ngControll.append($('<li>').attr('id', 'ngnameMenu').text('NGNameに追加'));
+			$ngControll.append($('<li>').attr('id', 'ngtripMenu').text('トリップをNGに追加'));
 			$ngControll.append($('<li>').attr('id', 'ngresMenu').text('このレスを削除'));
 			$('#ng').after($ngControll);
 
 			$('#ng').on('toggle.visible', function(e) {
 				e.stopPropagation();
 				$(e.currentTarget).find('textarea').each(function() {
-					let v = eval($(this).attr('id').replace('Textarea', ''));
+					let v = eval($(this).data('key'));
 					$(this).val(v.getString);
 				});
 			});
@@ -745,14 +767,14 @@
 				return false;
 			});
 
-			let setcbConfig = function(id) {
-				eval(id + '.value = ' + $('#' + id + 'Checkbox').is(':checked'));
+			let setcbConfig = function(_obj) {
+				_obj.value = $('#'+ _obj.key +'Checkbox').is(':checked');
 			}
 			let setNGtxtConfig = function(id) {
 				self.ngOperator.replaceText = $('#' + id + 'Text').val();
 			}
-			let checkcbConfig = function(id) {
-				$('#' + id + 'Checkbox').prop('checked', eval(id + '.value'));
+			let checkcbConfig = function(_obj) {
+				$('#'+ _obj.key +'Checkbox').prop('checked', _obj.value);
 			}
 			let checkNGTxtConfig = function(id) {
 				let v = self.ngOperator.replaceText;
@@ -763,23 +785,23 @@
 				e.stopPropagation();
 				// テキストエリア類
 				$('#ng').find('textarea').each(function() {
-					let v = eval($(this).attr('id').replace('Textarea', ''));
+					let v = eval($(this).data('key'));
 					v.setValues($(this).val());
 				});
 				// チェックボックス類
-				setcbConfig("seethroughNG");
-				setcbConfig("loadAll");
-				setcbConfig("addToOnePage");
-				setcbConfig("autoLoad");
-				setcbConfig("useNG");
-				setcbConfig("tooltipOnDicPage");
-				setcbConfig("showIDTooltip");
-				setcbConfig("showResAnchorTooltip");
-				setcbConfig("showResNumberTooltip");
-				setcbConfig("showResHandleTooltip");
-				setcbConfig("classificationID");
-				setcbConfig("classificationResNumber");
-				setcbConfig("switcherInTopMenu");
+				setcbConfig(seethroughNG);
+				setcbConfig(loadAll);
+				setcbConfig(addToOnePage);
+				setcbConfig(autoLoad);
+				setcbConfig(useNG);
+				setcbConfig(tooltipOnDicPage);
+				setcbConfig(showIDTooltip);
+				setcbConfig(showResAnchorTooltip);
+				setcbConfig(showResNumberTooltip);
+				setcbConfig(showResHandleTooltip);
+				setcbConfig(classificationID);
+				setcbConfig(classificationResNumber);
+				setcbConfig(switcherInTopMenu);
 				setNGtxtConfig(self.ngOperator.GMKey);
 				self.ngOperator.applyNg(self.resCollection.resList);
 			});
@@ -788,23 +810,23 @@
 				e.stopPropagation();
 				// テキストエリア類
 				$('#ng').find('textarea').each(function() {
-					let v = eval($(this).attr('id').replace('Textarea', ''));
+					let v = eval($(this).data('key'));
 					$(this).val(v.getString);
 				});
 				// チェックボックス類
-				checkcbConfig("seethroughNG");
-				checkcbConfig("loadAll");
-				checkcbConfig("addToOnePage");
-				checkcbConfig("autoLoad");
-				checkcbConfig("useNG");
-				checkcbConfig("tooltipOnDicPage");
-				checkcbConfig("showIDTooltip");
-				checkcbConfig("showResAnchorTooltip");
-				checkcbConfig("showResNumberTooltip");
-				checkcbConfig("showResHandleTooltip");
-				checkcbConfig("classificationID");
-				checkcbConfig("classificationResNumber");
-				checkcbConfig("switcherInTopMenu");
+				checkcbConfig(seethroughNG);
+				checkcbConfig(loadAll);
+				checkcbConfig(addToOnePage);
+				checkcbConfig(autoLoad);
+				checkcbConfig(useNG);
+				checkcbConfig(tooltipOnDicPage);
+				checkcbConfig(showIDTooltip);
+				checkcbConfig(showResAnchorTooltip);
+				checkcbConfig(showResNumberTooltip);
+				checkcbConfig(showResHandleTooltip);
+				checkcbConfig(classificationID);
+				checkcbConfig(classificationResNumber);
+				checkcbConfig(switcherInTopMenu);
 				checkNGTxtConfig(self.ngOperator.GMKey);
 			});
 			// -->| bindMenu()
