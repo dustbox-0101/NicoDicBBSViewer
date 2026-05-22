@@ -9,10 +9,13 @@
 // @grant         GM_setValue
 // @grant         GM_addElement
 // @version       0.1.3
-// @updateURL     https://github.com/dustbox-0101/NicoDicBBSViewer/raw/refs/heads/remodel/NicoDicBBSViewer.user.js
 // ==/UserScript==
 
-(function($){
+/***
+ * https://github.com/dustbox-0101/NicoDicBBSViewer/raw/refs/heads/remodel/NicoDicBBSViewer.user.js
+ ***/
+
+;(function($){
 	GM_addElement(document.getElementsByTagName('head')[0], 'style', {textContent: `
 		.ID {text-decoration:underline; color:black; display:inline;}
 		.IDMulti {text-decoration:underline; color:blue; display:inline;}
