@@ -8,7 +8,7 @@
 // @grant         GM_getValue
 // @grant         GM_setValue
 // @grant         GM_addElement
-// @version       0.1.3
+// @version       0.1.3.1
 // ==/UserScript==
 
 /***
@@ -705,7 +705,7 @@
 			appendSubList(parentUl, ngUl, "NG機能");
 
 			// TODO: 「更新時有効」を前提としても、とにかく処理を考える
-			// appendConfigLi(parentUl, '記事ページでもID、番号の色分けやツールチップを表示する', tooltipOnDicPage);
+			appendConfigLi(parentUl, '記事ページでもID、番号の色分けやツールチップを表示する', tooltipOnDicPage);
 
 			let tooltipUl = getSubUl();
 			appendConfigLi(tooltipUl, 'ID(<span style="text-decoration:underline;">ID</span>)ツールチップを表示する', showIDTooltip);
